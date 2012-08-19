@@ -54,10 +54,11 @@ def waf_entry_point(current_directory, version, wafdir):
 	cur = current_directory
 	while cur:
 		lst = os.listdir(cur)
-		if Options.lockfile in lst:
+		lockpath = os.path.join(cur, Options.lockfile)
+		if os.path.exists(lockpath):
 			env = ConfigSet.ConfigSet()
 			try:
-				env.load(os.path.join(cur, Options.lockfile))
+				env.load(lockpath)
 				ino = os.stat(cur)[stat.ST_INO]
 			except Exception:
 				pass
@@ -273,33 +274,32 @@ def distclean_dir(dirname):
 
 def distclean(ctx):
 	'''removes the build directory'''
+
+	try:
+		proj = ConfigSet.ConfigSet(Options.lockfile)
+		if proj['out_dir'] != proj['top_dir']:
+			try:
+				shutil.rmtree(proj['out_dir'])
+			except IOError:
+				pass
+			except OSError as e:
+				if e.errno != errno.ENOENT:
+					Logs.warn('project %r cannot be removed' % proj[Context.OUT])
+		else:
+			distclean_dir(proj['out_dir'])
+
+		for k in (proj['out_dir'], proj['top_dir'], proj['run_dir']):
+			try:
+				os.remove(os.path.join(k, Options.lockfile))
+			except OSError as e:
+				if e.errno != errno.ENOENT:
+					Logs.warn('file %r cannot be removed' % f)
+
+	except IOError:
+		Logs.warn('could not read %r' % f)
+
 	lst = os.listdir('.')
 	for f in lst:
-		if f == Options.lockfile:
-			try:
-				proj = ConfigSet.ConfigSet(f)
-			except IOError:
-				Logs.warn('Could not read %r' % f)
-				continue
-
-			if proj['out_dir'] != proj['top_dir']:
-				try:
-					shutil.rmtree(proj['out_dir'])
-				except IOError:
-					pass
-				except OSError as e:
-					if e.errno != errno.ENOENT:
-						Logs.warn('project %r cannot be removed' % proj[Context.OUT])
-			else:
-				distclean_dir(proj['out_dir'])
-
-			for k in (proj['out_dir'], proj['top_dir'], proj['run_dir']):
-				try:
-					os.remove(os.path.join(k, Options.lockfile))
-				except OSError as e:
-					if e.errno != errno.ENOENT:
-						Logs.warn('file %r cannot be removed' % f)
-
 		# remove the local waf cache
 		if f.startswith('.waf') and not Options.commands:
 			shutil.rmtree(f, ignore_errors=True)
