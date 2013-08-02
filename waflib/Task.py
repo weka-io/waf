@@ -770,6 +770,10 @@ class Task(TaskBase):
 		bld = self.generator.bld
 
 		self.are_implicit_nodes_ready()
+		try:
+			bld.node_deps
+		except AttributeError:
+			return None
 
 		# scanner returns a node that does not have a signature
 		# just *ignore* the error and let them figure out from the compiler output
