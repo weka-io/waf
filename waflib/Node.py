@@ -435,7 +435,7 @@ class Node(object):
 			p = p.parent
 		return id(p) == id(node)
 
-	def ant_iter(self, accept=None, maxdepth=25, pats=[], dir=False, src=True, remove=True):
+	def ant_iter(self, accept=None, maxdepth=25, pats=[], dir=False, src=True, remove=True, followlinks=False):
 		"""
 		Semi-private and recursive method used by ant_glob.
 
@@ -471,7 +471,8 @@ class Node(object):
 
 				node = self.make_node([name])
 
-				isdir = os.path.isdir(node.abspath())
+				path = node.abspath()
+				isdir = os.path.isdir(path)
 				if accepted:
 					if isdir:
 						if dir:
@@ -480,10 +481,10 @@ class Node(object):
 						if src:
 							yield node
 
-				if getattr(node, 'cache_isdir', None) or isdir:
+				if (followlinks or not os.path.islink(path)) and (getattr(node, 'cache_isdir', None) or isdir):
 					node.cache_isdir = True
 					if maxdepth:
-						for k in node.ant_iter(accept=accept, maxdepth=maxdepth - 1, pats=npats, dir=dir, src=src, remove=remove):
+						for k in node.ant_iter(accept=accept, maxdepth=maxdepth - 1, pats=npats, dir=dir, src=src, remove=remove, followlinks=followlinks):
 							yield k
 		raise StopIteration
 
@@ -517,6 +518,8 @@ class Node(object):
 		:type src: bool
 		:param remove: remove files/folders that do not exist (True by default)
 		:type remove: bool
+		:param followlinks: follow symbolic links (True by default)
+		:type followlinks: bool
 		:param maxdepth: maximum depth of recursion
 		:type maxdepth: int
 		:param ignorecase: ignore case while matching (False by default)
@@ -576,7 +579,7 @@ class Node(object):
 				nacc = []
 			return [nacc, nrej]
 
-		ret = [x for x in self.ant_iter(accept=accept, pats=[to_pat(incl), to_pat(excl)], maxdepth=kw.get('maxdepth', 25), dir=dir, src=src, remove=kw.get('remove', True))]
+		ret = [x for x in self.ant_iter(accept=accept, pats=[to_pat(incl), to_pat(excl)], maxdepth=kw.get('maxdepth', 25), dir=dir, src=src, remove=kw.get('remove', True), followlinks=kw.get('followlinks', True))]
 		if kw.get('flat', False):
 			return ' '.join([x.path_from(self) for x in ret])
 

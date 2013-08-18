@@ -1207,7 +1207,7 @@ class CleanContext(BuildContext):
 			lst=[]
 			for e in self.all_envs.values():
 				lst.extend(self.root.find_or_declare(f) for f in e[CFG_FILES])
-			for n in self.bldnode.ant_glob('**/*', excl='.lock* *conf_check_*/** config.log c4che/*', quiet=True):
+			for n in self.bldnode.ant_glob('**/*', excl='.lock* *conf_check_*/** config.log c4che/*', quiet=True, followlinks=False):
 				if n in lst:
 					continue
 				n.delete()
