@@ -8,10 +8,10 @@
 When using this tool, the wscript will look like:
 
         def configure(conf):
-                conf.load('compiler_cxx tinyxml')
+                conf.load('compiler_cxx gtest')
 
         def build(bld):
-                bld(source='main.cpp', target='app', use='TINYXML')
+                bld(source='main.cpp', target='app', use='GTEST')
 
 Options are generated, in order to specify the location of tinyxml includes/libraries.
 
