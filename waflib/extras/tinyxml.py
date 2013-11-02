@@ -85,3 +85,4 @@ def check_tinyxml(self,*k,**kw):
                 Logs.pprint('GREEN','        TinyXML include : %s'%self.env['INCLUDES_%s'%var])
                 Logs.pprint('GREEN','        TinyXML lib     : %s'%self.env['LIB_%s'%var])
                 Logs.pprint('GREEN','        TinyXML libpath : %s'%self.env['LIBPATH_%s'%var])
+

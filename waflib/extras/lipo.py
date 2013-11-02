@@ -11,7 +11,12 @@ from waflib.TaskGen import extension, feature, after, before, before_method
 from waflib.Utils import threading
 
 def options(ctx):
-        ctx.add_option('-lo','--lipo-options', dest='lipo_option',action='store', default='', help='space separated list of flags to pass to lipo')
+        ctx.add_option('-lo',
+		       '--lipo-options', 
+		       dest='lipo_option',
+		       action='store', 
+		       default='', 
+		       help='space separated list of flags to pass to lipo')
 
 def configure(conf):
     conf.find_program('lipo', var='LIPO')
