@@ -68,7 +68,7 @@ def tinyxml_get_root(self,*k,**kw):
 
 @conf
 def check_tinyxml(self,*k,**kw):
-        if not self.env['CXX']:
+        if not self.env.CXX:
                 self.fatal('first load a c++ compiler')
 
         var=kw.get('uselib_store','TINYXML')
