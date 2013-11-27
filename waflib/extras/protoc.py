@@ -19,7 +19,7 @@ Example::
         bld(
                 features = 'cxx cxxprogram'
                 source   = 'main.cpp file1.proto proto/file2.proto', 
-                includes = '. proto',
+                include  = '. proto',
                 target   = 'executable') 
 
 Notes when using this tool:

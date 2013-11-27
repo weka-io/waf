@@ -32,11 +32,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 import os, sys
 
-<<<<<<< HEAD
-VERSION="1.7.13"
-=======
 VERSION="1.8.0"
->>>>>>> origin/waf-1.8
 REVISION="x"
 INSTALL="x"
 C1='x'

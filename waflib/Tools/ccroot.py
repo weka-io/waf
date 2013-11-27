@@ -504,10 +504,6 @@ def apply_vnum(self):
 		self.env.append_value('LINKFLAGS', v.split())
 
 	# the following task is just to enable execution from the build dir :-/
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/waf-1.8
 	if self.env.DEST_OS != 'openbsd':
 		self.create_task('vnum', node, [node.parent.find_or_declare(name2), node.parent.find_or_declare(name3)])
 

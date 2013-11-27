@@ -1,16 +1,3 @@
-<<<<<<< HEAD
-NEW IN WAF 1.7.13
------------------
-* Fix for library installation on OpenBSD #1355
-* Intel compiler detection fix when using Python3 #1356
-
-NEW IN WAF 1.7.12
------------------
-* Fix for systems without threading #1323
-* Fix for library installation on OpenBSD
-* Propagate the max_depth argument in ant_glob #1328
-* wsdk detection fix #1335
-=======
 NEW IN WAF 1.8.0
 ----------------
 * Prevent external static libraries propagation through uselib vars #1320
@@ -20,7 +7,6 @@ NEW IN WAF 1.8.0
 * LaTeX multibib #1345
 * Various improvements in the Python detection and processing
 * Rst document processing
->>>>>>> origin/waf-1.8
 
 NEW IN WAF 1.7.11
 -----------------
