@@ -1,4 +1,4 @@
-Main repository for waf 1.7 on http://waf.googlecode.com/git/
+Main repository for waf 1.8 on http://waf.googlecode.com/git/
 -------------------------------------------------------------
 
 waflib            the core library
@@ -29,18 +29,17 @@ Programming details
 -------------------
 
 * Do not use x.split("\n") but x.splitlines()
-* Do not catch all exceptions unless you have a good reason to do so
+* Do not catch all exceptions unless you have a good reason to do so (no "except:")
 * File handles are too easy to get wrong, use Node.readf/Node.writef/Utils.readf/Utils.writef
 
 Wiki documentation on http://wiki.waf.googlecode.com/git/
 ---------------------------------------------------------
 
-...
+The wiki documentation is always outdated
 
 Previous branches
 -----------------
 
 old svn repository http://waf.googlecode.com/svn/trunk/ (for waf 1.5, read-only and unused)
 old branch for waf 1.5 http://waf.googlecode.com/svn/branches/waf-1.5/ (again, read-only and unused)
-
 

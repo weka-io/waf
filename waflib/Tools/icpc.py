@@ -24,7 +24,6 @@ def find_icpc(conf):
 	elif 'CXX' in conf.environ: cxx = conf.environ['CXX']
 	if not cxx: cxx = conf.find_program('icpc', var='CXX')
 	if not cxx: conf.fatal('Intel C++ Compiler (icpc) was not found')
-	cxx = conf.cmd_to_list(cxx)
 
 	conf.get_cc_version(cxx, icc=True)
 	v['CXX'] = cxx

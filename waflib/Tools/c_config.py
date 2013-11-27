@@ -103,7 +103,7 @@ MACRO_TO_DEST_CPU = {
 }
 
 @conf
-def parse_flags(self, line, uselib_store, env=None, force_static=False):
+def parse_flags(self, line, uselib_store, env=None, force_static=False, posix=None):
 	"""
 	Parse the flags from the input lines, and add them to the relevant use variables::
 
@@ -124,18 +124,21 @@ def parse_flags(self, line, uselib_store, env=None, force_static=False):
 
 	env = env or self.env
 
-	# append_unique is not always possible
-	# for example, apple flags may require both -arch i386 and -arch ppc
+	# Issue 811 and 1371
+	if posix is None:
+		posix = True
+		if '\\' in line:
+			posix = ('\\ ' in line) or ('\\\\' in line)
 
-	app = env.append_value
-	appu = env.append_unique
-	#lst = shlex.split(line)
-	# issue #811
-	lex = shlex.shlex(line, posix=False)
+	lex = shlex.shlex(line, posix=posix)
 	lex.whitespace_split = True
 	lex.commenters = ''
 	lst = list(lex)
 
+	# append_unique is not always possible
+	# for example, apple flags may require both -arch i386 and -arch ppc
+	app = env.append_value
+	appu = env.append_unique
 	uselib = uselib_store
 	while lst:
 		x = lst.pop(0)
@@ -169,6 +172,10 @@ def parse_flags(self, line, uselib_store, env=None, force_static=False):
 			appu('FRAMEWORK_' + uselib, [lst.pop(0)])
 		elif x.startswith('-F'):
 			appu('FRAMEWORKPATH_' + uselib, [x[2:]])
+		elif x.startswith('-Wl,-R'):
+			app('RPATH_' + uselib, x[6:])
+		elif x.startswith('-Wl,-rpath,'):
+			app('RPATH_' + uselib, x[11:])
 		elif x.startswith('-Wl'):
 			app('LINKFLAGS_' + uselib, [x])
 		elif x.startswith('-m') or x.startswith('-f') or x.startswith('-dynamic'):
@@ -268,12 +275,14 @@ def exec_cfg(self, kw):
 	:type define_variable: dict(string: string)
 	"""
 
+	path = Utils.to_list(kw['path'])
+
 	def define_it():
 		self.define(self.have_define(kw.get('uselib_store', kw['package'])), 1, 0)
 
 	# pkg-config version
 	if 'atleast_pkgconfig_version' in kw:
-		cmd = [kw['path'], '--atleast-pkgconfig-version=%s' % kw['atleast_pkgconfig_version']]
+		cmd = path + ['--atleast-pkgconfig-version=%s' % kw['atleast_pkgconfig_version']]
 		self.cmd_and_log(cmd)
 		if not 'okmsg' in kw:
 			kw['okmsg'] = 'yes'
@@ -283,7 +292,7 @@ def exec_cfg(self, kw):
 	for x in cfg_ver:
 		y = x.replace('-', '_')
 		if y in kw:
-			self.cmd_and_log([kw['path'], '--%s=%s' % (x, kw[y]), kw['package']])
+			self.cmd_and_log(path + ['--%s=%s' % (x, kw[y]), kw['package']])
 			if not 'okmsg' in kw:
 				kw['okmsg'] = 'yes'
 			define_it()
@@ -291,11 +300,11 @@ def exec_cfg(self, kw):
 
 	# retrieving the version of a module
 	if 'modversion' in kw:
-		version = self.cmd_and_log([kw['path'], '--modversion', kw['modversion']]).strip()
+		version = self.cmd_and_log(path + ['--modversion', kw['modversion']]).strip()
 		self.define('%s_VERSION' % Utils.quote_define_name(kw.get('uselib_store', kw['modversion'])), version)
 		return version
 
-	lst = [kw['path']]
+	lst = [] + path
 
 	defi = kw.get('define_variable', None)
 	if not defi:
@@ -332,7 +341,7 @@ def exec_cfg(self, kw):
 		kw['okmsg'] = 'yes'
 
 	define_it()
-	self.parse_flags(ret, kw.get('uselib_store', kw['package'].upper()), kw.get('env', self.env), force_static=static)
+	self.parse_flags(ret, kw.get('uselib_store', kw['package'].upper()), kw.get('env', self.env), force_static=static, posix=kw.get('posix', None))
 	return ret
 
 @conf
@@ -913,7 +922,7 @@ def have_define(self, key):
 	return (self.env.HAVE_PAT or 'HAVE_%s') % Utils.quote_define_name(key)
 
 @conf
-def write_config_header(self, configfile='', guard='', top=False, env=None, defines=True, headers=False, remove=True, define_prefix=''):
+def write_config_header(self, configfile='', guard='', top=False, defines=True, headers=False, remove=True, define_prefix=''):
 	"""
 	Write a configuration header containing defines and includes::
 
@@ -936,10 +945,6 @@ def write_config_header(self, configfile='', guard='', top=False, env=None, defi
 	:type define_prefix: string
 	:param define_prefix: prefix all the defines in the file with a particular prefix
 	"""
-	# TODO waf 1.8: the parameter env is not used
-	if env:
-		Logs.warn('Cannot pass env to write_config_header')
-
 	if not configfile: configfile = WAF_CONFIG_H
 	waf_guard = guard or 'W_%s_WAF' % Utils.quote_define_name(configfile)
 
@@ -1215,8 +1220,6 @@ def multicheck(self, *k, **kw):
 	class par(object):
 		def __init__(self):
 			self.keep = False
-			self.cache_global = Options.cache_global
-			self.nocache = Options.options.nocache
 			self.returned_tasks = []
 			self.task_sigs = {}
 		def total(self):

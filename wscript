@@ -10,7 +10,11 @@ To add a tool that does not exist in the folder compat15, pass an absolute path:
 """
 
 
+<<<<<<< HEAD
 VERSION="1.7.13"
+=======
+VERSION="1.8.0"
+>>>>>>> origin/waf-1.8
 APPNAME='waf'
 REVISION=''
 
@@ -111,6 +115,8 @@ def options(opt):
 		dest='strip_comments')
 	opt.add_option('--tools', action='store', help='Comma-separated 3rd party tools to add, eg: "compat,ocaml" [Default: "compat15"]',
 		dest='add3rdparty', default='compat15')
+	opt.add_option('--coretools', action='store', help='Comma-separated core tools to add, eg: "vala,tex" [Default: all of them]',
+		dest='coretools', default='default')
 	opt.add_option('--prelude', action='store', help='Code to execute before calling waf', dest='prelude', default=PRELUDE)
 	opt.load('python')
 
@@ -249,14 +255,12 @@ def create_waf(*k, **kw):
 	mw = 'tmp-waf-'+VERSION
 	print("-> preparing %r" % mw)
 
-	import tarfile, re
+	import tarfile, re, zipfile
 
 	zipType = Options.options.zip.strip().lower()
 	if zipType not in zip_types:
 		zipType = zip_types[0]
 
-	#open a file as tar.[extension] for writing
-	tar = tarfile.open('%s.tar.%s' % (mw, zipType), "w:%s" % zipType)
 
 	files = []
 	add3rdparty = []
@@ -266,18 +270,28 @@ def create_waf(*k, **kw):
 		else:
 			add3rdparty.append(x + '.py')
 
+	coretools = []
+	for x in Options.options.coretools.split(','):
+		coretools.append(x + '.py')
+
 	for d in '. Tools extras'.split():
 		dd = os.path.join('waflib', d)
 		for k in os.listdir(dd):
 			if k == '__init__.py':
 				files.append(os.path.join(dd, k))
 				continue
+			if d == 'Tools' and Options.options.coretools != 'default':
+				if not k in coretools:
+					continue
 			if d == 'extras':
 				if not k in add3rdparty:
 					continue
 			if k.endswith('.py'):
 				files.append(os.path.join(dd, k))
 
+	#open a file as tar.[extension] for writing
+	tar = tarfile.open('%s.tar.%s' % (mw, zipType), "w:%s" % zipType)
+	z = zipfile.ZipFile("zip/waflib.zip", "w", compression=zipfile.ZIP_DEFLATED)
 	for x in files:
 		tarinfo = tar.gettarinfo(x, x)
 		tarinfo.uid   = tarinfo.gid   = 0
@@ -288,8 +302,18 @@ def create_waf(*k, **kw):
 		if os.path.isabs(x):
 			tarinfo.name = 'waflib/extras/' + os.path.split(x)[1]
 
+		print("   adding %s as %s" % (x, tarinfo.name))
+
+		def dest(x):
+			if os.path.isabs(x):
+				return os.path.join("extras", os.path.basename(x))
+			else:
+				return os.path.normpath(os.path.relpath(x, "."))
+
+		z.write(x, dest(x))
 		tar.addfile(tarinfo, code)
 	tar.close()
+	z.close()
 
 	f = open('waf-light', 'rU')
 	try:

@@ -1,7 +1,7 @@
 WHAT YOU WILL FIND HERE
 -----------------------
 
-Waf (1.7)
+Waf (1.8)
 
 For the manual: http://docs.waf.googlecode.com/git/book_16/single.html
 For the api docs: http://docs.waf.googlecode.com/git/apidocs_16/index.html
@@ -26,6 +26,8 @@ $ ./waf-light --tools=compat15 --prelude=$'\tfrom waflib.extras import compat15\
 
 Any kind of initialization is possible, though one may prefer the build system kit (folder build_system_kit):
 $ ./waf-light --make-waf --tools=compat15,/comp/waf/aba.py --prelude=$'\tfrom waflib.extras import compat15\n\tprint("ok")'
+
+Or if you do not want to regenerate the waf file all the time, set the WAFDIR environment variable to the directory containing "waflib".
 
 HOW TO TRY THE EXAMPLES
 -----------------------

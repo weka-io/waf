@@ -102,6 +102,34 @@ except ImportError:
 				value = self.default_factory()
 				self[key] = value
 				return value
+try:
+	from collections import OrderedDict as ordered_iter_dict
+except ImportError:
+	class ordered_iter_dict(dict):
+		def __init__(self, *k, **kw):
+			self.lst = []
+			dict.__init__(self, *k, **kw)
+		def clear(self):
+			dict.clear(self)
+			self.lst = []
+		def __setitem__(self, key, value):
+			dict.__setitem__(self, key, value)
+			try:
+				self.lst.remove(key)
+			except ValueError:
+				pass
+			self.lst.append(key)
+		def __delitem__(self, key):
+			dict.__delitem__(self, key)
+			try:
+				self.lst.remove(key)
+			except ValueError:
+				pass
+		def __iter__(self):
+			for x in self.lst:
+				yield x
+		def keys(self):
+			return self.lst
 
 is_win32 = sys.platform in ('win32', 'cli')
 
@@ -378,33 +406,6 @@ def to_list(sth):
 	else:
 		return sth
 
-re_nl = re.compile('\r*\n', re.M)
-def str_to_dict(txt):
-	"""
-	Parse a string with key = value pairs into a dictionary::
-
-		from waflib import Utils
-		x = Utils.str_to_dict('''
-			a = 1
-			b = test
-		''')
-
-	:type  s: string
-	:param s: String to parse
-	:rtype: dict
-	:return: Dictionary containing parsed key-value pairs
-	"""
-	tbl = {}
-
-	lines = re_nl.split(txt)
-	for x in lines:
-		x = x.strip()
-		if not x or x.startswith('#') or x.find('=') < 0:
-			continue
-		tmp = x.split('=')
-		tbl[tmp[0].strip()] = '='.join(tmp[1:]).strip()
-	return tbl
-
 def split_path(path):
 	return path.split('/')
 
@@ -440,8 +441,8 @@ def check_dir(path):
 	"""
 	Ensure that a directory exists (similar to ``mkdir -p``).
 
-	:type  dir: string
-	:param dir: Path to directory
+	:type  path: string
+	:param path: Path to directory
 	"""
 	if not os.path.isdir(path):
 		try:
@@ -449,6 +450,29 @@ def check_dir(path):
 		except OSError as e:
 			if not os.path.isdir(path):
 				raise Errors.WafError('Cannot create the folder %r' % path, ex=e)
+
+def check_exe(name):
+	"""
+	Ensure that a program exists
+	:type name: string
+	:param name: name or path to program
+	:return: path of the program or None
+	"""
+	if not name:
+		raise ValueError('Cannot execute an empty string!')
+	def is_exe(fpath):
+		return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+	fpath, fname = os.path.split(name)
+	if fpath and is_exe(name):
+		return name
+	else:
+		for path in os.environ["PATH"].split(os.pathsep):
+			path = path.strip('"')
+			exe_file = os.path.join(path, name)
+			if is_exe(exe_file):
+				return exe_file
+	return None
 
 def def_attrs(cls, **kw):
 	"""
@@ -605,10 +629,10 @@ class Timer(object):
 
 	def __str__(self):
 		delta = datetime.datetime.utcnow() - self.start_time
-		days = int(delta.days)
-		hours = delta.seconds // 3600
-		minutes = (delta.seconds - hours * 3600) // 60
-		seconds = delta.seconds - hours * 3600 - minutes * 60 + float(delta.microseconds) / 1000 / 1000
+		days = delta.days
+		hours, rem = divmod(delta.seconds, 3600)
+		minutes, seconds = divmod(rem, 60)
+		seconds += delta.microseconds * 1e-6
 		result = ''
 		if days:
 			result += '%dd' % days

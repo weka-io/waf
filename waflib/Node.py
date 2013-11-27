@@ -779,11 +779,6 @@ class Node(object):
 		"Build path without the file name"
 		return self.parent.bldpath()
 
-	def bld_base(self):
-		"Build path without the extension: src/dir/foo(.cpp)"
-		s = os.path.splitext(self.name)[0]
-		return self.bld_dir() + os.sep + s
-
 	def get_bld_sig(self):
 		"""
 		Node signature, assuming the file is in the build directory
@@ -797,10 +792,6 @@ class Node(object):
 			self.sig = Utils.h_file(self.abspath())
 		self.cache_sig = ret = self.sig
 		return ret
-
-
-	# TODO Waf 1.8
-	search = search_node
 
 pickle_lock = Utils.threading.Lock()
 """Lock mandatory for thread-safe node serialization"""

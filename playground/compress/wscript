@@ -110,7 +110,7 @@ def configure(conf):
 	conf.find_program('gnuplot', var='GNUPLOT')
 
 def build(bld):
-	wafdir_lst = bld.srcnode.ant_glob('.waf-1.6*', dir=True)
+	wafdir_lst = bld.srcnode.ant_glob('.waf*', dir=True)
 	if not wafdir_lst:
 		bld.fatal('Missing local Waf directory')
 	node = wafdir_lst[0]

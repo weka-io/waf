@@ -63,40 +63,6 @@ def f(tsk):
 	return tsk.exec_command(lst, cwd=wd, env=env.env or None)
 '''
 
-def cache_outputs(cls):
-	"""
-	Task class decorator applied to all task classes by default unless they define the attribute 'nocache'::
-
-		from waflib import Task
-		class foo(Task.Task):
-			nocache = True
-
-	If bld.cache_global is defined and if the task instances produces output nodes,
-	the files will be copied into a folder in the cache directory
-
-	The files may also be retrieved from that folder, if it exists
-	"""
-	m1 = cls.run
-	def run(self):
-		bld = self.generator.bld
-		if bld.cache_global and not bld.nocache:
-			if self.can_retrieve_cache():
-				return 0
-		return m1(self)
-	cls.run = run
-
-	m2 = cls.post_run
-	def post_run(self):
-		bld = self.generator.bld
-		ret = m2(self)
-		if bld.cache_global and not bld.nocache:
-			self.put_files_cache()
-		return ret
-	cls.post_run = post_run
-
-	return cls
-
-
 classes = {}
 "class tasks created by user scripts or Waf tools are kept in this dict name -> class object"
 
@@ -127,9 +93,6 @@ class store_task_type(type):
 			elif getattr(cls, 'run', None) and not 'hcode' in cls.__dict__:
 				# getattr(cls, 'hcode') would look in the upper classes
 				cls.hcode = Utils.h_fun(cls.run)
-
-			if not getattr(cls, 'nocache', None):
-				cls = cache_outputs(cls)
 
 			# be creative
 			getattr(cls, 'register', classes)[name] = cls
@@ -374,14 +337,24 @@ class TaskBase(evil):
 
 	def colon(self, var1, var2):
 		"""
-		private function for the moment
+		Support code for scriptlet expressions such as ${FOO_ST:FOO}
+		If the first variable (FOO_ST) is empty, then an empty list is returned
 
-		used for scriptlet expressions such as ${FOO_ST:FOO}, for example, if
-		env.FOO_ST = ['-a', '-b']
-		env.FOO    = ['1', '2']
-		then the result will be ['-a', '-b', '1', '-a', '-b', '2']
+		The results will be slightly different if FOO_ST is a list, for example::
+
+			env.FOO_ST = ['-a', '-b']
+			env.FOO_ST = '-I%s'
+			# ${FOO_ST:FOO} returns
+			['-Ip1', '-Ip2']
+
+			env.FOO    = ['p1', 'p2']
+			# ${FOO_ST:FOO} returns
+			['-a', '-b', 'p1', '-a', '-b', 'p2']
 		"""
 		tmp = self.env[var1]
+		if not tmp:
+			return []
+
 		if isinstance(var2, str):
 			it = self.env[var2]
 		else:
@@ -389,8 +362,6 @@ class TaskBase(evil):
 		if isinstance(tmp, str):
 			return [tmp % x for x in it]
 		else:
-			if Logs.verbose and not tmp and it:
-				Logs.warn('Missing env variable %r for task %r (generator %r)' % (var1, self, self.generator))
 			lst = []
 			for y in it:
 				lst.extend(tmp)
@@ -810,107 +781,6 @@ class Task(TaskBase):
 				if not tsk.hasrun:
 					#print "task is not ready..."
 					raise Errors.TaskNotReady('not ready')
-
-	def can_retrieve_cache(self):
-		"""
-		Used by :py:meth:`waflib.Task.cache_outputs`
-
-		Retrieve build nodes from the cache
-		update the file timestamps to help cleaning the least used entries from the cache
-		additionally, set an attribute 'cached' to avoid re-creating the same cache files
-
-		Suppose there are files in `cache/dir1/file1` and `cache/dir2/file2`:
-
-		#. read the timestamp of dir1
-		#. try to copy the files
-		#. look at the timestamp again, if it has changed, the data may have been corrupt (cache update by another process)
-		#. should an exception occur, ignore the data
-		"""
-
-		if not getattr(self, 'outputs', None):
-			return None
-
-		sig = self.signature()
-		ssig = Utils.to_hex(self.uid()) + Utils.to_hex(sig)
-
-		# first try to access the cache folder for the task
-		dname = os.path.join(self.generator.bld.cache_global, ssig)
-		try:
-			t1 = os.stat(dname).st_mtime
-		except OSError:
-			return None
-
-		for node in self.outputs:
-			orig = os.path.join(dname, node.name)
-			try:
-				shutil.copy2(orig, node.abspath())
-				# mark the cache file as used recently (modified)
-				os.utime(orig, None)
-			except (OSError, IOError):
-				Logs.debug('task: failed retrieving file')
-				return None
-
-		# is it the same folder?
-		try:
-			t2 = os.stat(dname).st_mtime
-		except OSError:
-			return None
-
-		if t1 != t2:
-			return None
-
-		for node in self.outputs:
-			node.sig = sig
-			if self.generator.bld.progress_bar < 1:
-				self.generator.bld.to_log('restoring from cache %r\n' % node.abspath())
-
-		self.cached = True
-		return True
-
-	def put_files_cache(self):
-		"""
-		Used by :py:func:`waflib.Task.cache_outputs` to store the build files in the cache
-		"""
-
-		# file caching, if possible
-		# try to avoid data corruption as much as possible
-		if getattr(self, 'cached', None):
-			return None
-		if not getattr(self, 'outputs', None):
-			return None
-
-		sig = self.signature()
-		ssig = Utils.to_hex(self.uid()) + Utils.to_hex(sig)
-		dname = os.path.join(self.generator.bld.cache_global, ssig)
-		tmpdir = tempfile.mkdtemp(prefix=self.generator.bld.cache_global + os.sep + 'waf')
-
-		try:
-			shutil.rmtree(dname)
-		except Exception:
-			pass
-
-		try:
-			for node in self.outputs:
-				dest = os.path.join(tmpdir, node.name)
-				shutil.copy2(node.abspath(), dest)
-		except (OSError, IOError):
-			try:
-				shutil.rmtree(tmpdir)
-			except Exception:
-				pass
-		else:
-			try:
-				os.rename(tmpdir, dname)
-			except OSError:
-				try:
-					shutil.rmtree(tmpdir)
-				except Exception:
-					pass
-			else:
-				try:
-					os.chmod(dname, Utils.O755)
-				except Exception:
-					pass
 
 def is_before(t1, t2):
 	"""

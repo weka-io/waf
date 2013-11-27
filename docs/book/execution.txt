@@ -370,7 +370,6 @@ Options:
   -j JOBS, --jobs=JOBS  amount of parallel jobs (2)
   -k, --keep            keep running happily even if errors are found
   -v, --verbose         verbosity level -v -vv or -vvv [default: 0]
-  --nocache             ignore the WAFCACHE (if set)
   --zones=ZONES         debugging zones (task_gen, deps, tasks, etc)
 
   configure options:

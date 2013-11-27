@@ -161,7 +161,6 @@ echo LIB=%%LIB%%;%%LIBPATH%%
 	env.update(PATH = path)
 	compiler_name, linker_name, lib_name = _get_prog_names(conf, compiler)
 	cxx = conf.find_program(compiler_name, path_list=MSVC_PATH)
-	cxx = conf.cmd_to_list(cxx)
 
 	# delete CL if exists. because it could contain parameters wich can change cl's behaviour rather catastrophically.
 	if 'CL' in env:
@@ -727,7 +726,6 @@ def find_msvc(conf):
 	if v['CXX']: cxx = v['CXX']
 	elif 'CXX' in conf.environ: cxx = conf.environ['CXX']
 	cxx = conf.find_program(compiler_name, var='CXX', path_list=path)
-	cxx = conf.cmd_to_list(cxx)
 
 	# before setting anything, check if the compiler is really msvc
 	env = dict(conf.environ)
@@ -928,14 +926,12 @@ def exec_mf(self):
 
 	debug('msvc: embedding manifest in mode %r' % mode)
 
-	lst = []
-	lst.append(env['MT'])
+	lst = [] + mtool
 	lst.extend(Utils.to_list(env['MTFLAGS']))
 	lst.extend(['-manifest', manifest])
 	lst.append('-outputresource:%s;%s' % (outfile, mode))
 
-	lst = [lst]
-	return self.exec_command(*lst)
+	return self.exec_command(lst)
 
 def quote_response_command(self, flag):
 	if flag.find(' ') > -1:

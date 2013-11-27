@@ -2,7 +2,6 @@
 # encoding: utf-8
 # Thomas Nagy, 2006-2010 (ita)
 
-# the following two variables are used by the target "waf dist"
 VERSION='0.0.1'
 APPNAME='cc_test'
 
@@ -29,7 +28,7 @@ def configure(conf):
 
 
 	# gotcha - the config.h must be written for each variant
-	txt = conf.bldnode.search('config.h').read()
+	txt = conf.bldnode.search_node('config.h').read()
 	for x in lst:
 		node = conf.bldnode.make_node(x + '/config.h')
 		node.parent.mkdir()
@@ -81,7 +80,7 @@ def locked_progress_line(self, state, total, col1, col2):
 		for x in self.siblings:
 			try:
 				p = x.bld.producer
-			except:
+			except AttributeError:
 				pass
 			else:
 				total += p.total
@@ -89,8 +88,6 @@ def locked_progress_line(self, state, total, col1, col2):
 		return Build.BuildContext.progress_line(self, self.count[0], total, col1, col2)
 	finally:
 		self.line_lock.release()
-
-
 
 class cleanall_ctx(Build.CleanContext):
 	cmd = fun = 'cleanall'
@@ -108,8 +105,8 @@ def cleanall(ctx):
 			bld.save()
 
 
-
-features_str = '''
+# produces dict/json compatible output
+features_str = r'''
 #include <stdio.h>
 int is_big_endian()
 {
@@ -118,12 +115,14 @@ int is_big_endian()
 }
 int main()
 {
-	if (is_big_endian()) printf("bigendian=1\\n");
-	else printf("bigendian=0\\n");
-	printf("int_size=%d\\n", sizeof(int));
-	printf("long_int_size=%d\\n", sizeof(long int));
-	printf("long_long_int_size=%d\\n", sizeof(long long int));
-	printf("double_size=%d\\n", sizeof(double));
+	printf("{");
+	if (is_big_endian()) printf("\"bigendian\":1,");
+	else printf("\"bigendian\":0,");
+	printf("\"int_size\":%lu,", sizeof(int));
+	printf("\"long_int_size\":%lu,", sizeof(long int));
+	printf("\"long_long_int_size\":%lu,", sizeof(long long int));
+	printf("\"double_size\":%lu", sizeof(double));
+	printf("}");
 	return 0;
 }
 '''
@@ -136,7 +135,8 @@ def check_features(self):
 	except:
 		pass
 
-	t = Utils.str_to_dict(mp)
+
+	t = eval(mp)
 	try:
 		is_big = int(t['bigendian'])
 	except KeyError:
@@ -161,5 +161,4 @@ def check_features(self):
 
 from waflib import Configure
 Configure.conf(check_features) # bind the method
-
 

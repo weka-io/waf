@@ -350,7 +350,8 @@ def configure(conf):
 	And set the variable *GSETTINGSSCHEMADIR*
 	"""
 	conf.find_program('glib-genmarshal', var='GLIB_GENMARSHAL')
-	conf.find_perl_program('glib-mkenums', var='GLIB_MKENUMS')
+	conf.find_program('perl', var='PERL')
+	conf.find_program('glib-mkenums', interpreter='PERL', var='GLIB_MKENUMS')
 
 	# when cross-compiling, gsettings.m4 locates the program with the following:
 	#   pkg-config --variable glib_compile_schemas gio-2.0

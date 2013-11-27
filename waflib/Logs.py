@@ -93,16 +93,15 @@ try:
 except ImportError:
 	pass
 else:
-	if got_tty:
+	for stream in (sys.stderr, sys.stdout):
 		def get_term_cols_real():
 			"""
 			Private use only.
 			"""
-
-			dummy_lines, cols = struct.unpack("HHHH", \
-			fcntl.ioctl(sys.stderr.fileno(),termios.TIOCGWINSZ , \
-			struct.pack("HHHH", 0, 0, 0, 0)))[:2]
+			stuff = fcntl.ioctl(stream.fileno(), termios.TIOCGWINSZ, struct.pack("HHHH", 0, 0, 0, 0))
+			dummy_lines, cols = struct.unpack("HHHH", stuff)[:2]
 			return cols
+
 		# try the function once to see if it really works
 		try:
 			get_term_cols_real()
@@ -110,6 +109,7 @@ else:
 			pass
 		else:
 			get_term_cols = get_term_cols_real
+			break
 
 get_term_cols.__doc__ = """
 	Get the console width in characters.

@@ -11,7 +11,7 @@ def build(bld):
 	# now create your tex object for compiling the files
 	obj = bld(
 		features = 'tex',
-		type='latex', # default is pdflatex
+		type = 'latex', # default is pdflatex
 		source = 'document.ltx' # mandatory, the source
 	)
 
@@ -19,4 +19,8 @@ def build(bld):
 	obj.outs   = 'ps' # we want a postscript output too - 'ps pdf' works too
 	obj.prompt = 1 # put 0 for the batchmode (conceals the debug output)
 	obj.deps   = 'crossreferencing.ltx' # use this to give dependencies directly
+
+
+	# or more simply, for a pdf..
+	bld(features='tex', source='document-glossaries.ltx')
 

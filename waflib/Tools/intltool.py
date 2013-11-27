@@ -161,7 +161,8 @@ def configure(conf):
 	If a C/C++ compiler is present, execute a compilation test to find the header *locale.h*.
 	"""
 	conf.find_program('msgfmt', var='MSGFMT')
-	conf.find_perl_program('intltool-merge', var='INTLTOOL')
+	conf.find_program('perl', var='PERL')
+	conf.find_program('intltool-merge', interpreter='PERL', var='INTLTOOL')
 
 	prefix  = conf.env.PREFIX
 	datadir = conf.env.DATADIR

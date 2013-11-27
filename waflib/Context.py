@@ -11,6 +11,7 @@ from waflib import Utils, Errors, Logs
 import waflib.Node
 
 # the following 3 constants are updated on each new release (do not touch)
+<<<<<<< HEAD
 HEXVERSION=0x1070d00
 """Constant updated on new releases"""
 
@@ -18,6 +19,15 @@ WAFVERSION="1.7.13"
 """Constant updated on new releases"""
 
 WAFREVISION="daa91dba4b881d86bc25eec90a3745ebaeece835"
+=======
+HEXVERSION=0x1080000
+"""Constant updated on new releases"""
+
+WAFVERSION="1.8.0"
+"""Constant updated on new releases"""
+
+WAFREVISION="feaad909d5b46bfdb121cd5d217ba2031bc4ed10"
+>>>>>>> origin/waf-1.8
 """Constant updated on new releases"""
 
 ABI = 98
@@ -327,6 +337,9 @@ class Context(ctx):
 		if 'stderr' not in kw:
 			kw['stderr'] = subprocess.PIPE
 
+		if Logs.verbose and not kw['shell'] and not Utils.check_exe(cmd[0]):
+			raise Errors.WafError("Program %s not found!" % cmd[0])
+
 		try:
 			if kw['stdout'] or kw['stderr']:
 				p = subprocess.Popen(cmd, **kw)
@@ -387,6 +400,9 @@ class Context(ctx):
 			del kw['output']
 		else:
 			to_ret = STDOUT
+
+		if Logs.verbose and not kw['shell'] and not Utils.check_exe(cmd[0]):
+			raise Errors.WafError("Program %s not found!" % cmd[0])
 
 		kw['stdout'] = kw['stderr'] = subprocess.PIPE
 		if quiet is None:
@@ -528,10 +544,28 @@ class Context(ctx):
 
 	def load_special_tools(self, var, ban=[]):
 		global waf_dir
-		lst = self.root.find_node(waf_dir).find_node('waflib/extras').ant_glob(var)
-		for x in lst:
-			if not x.name in ban:
-				load_tool(x.name.replace('.py', ''))
+		if os.path.isdir(waf_dir):
+			lst = self.root.find_node(waf_dir).find_node('waflib/extras').ant_glob(var)
+			for x in lst:
+				if not x.name in ban:
+					load_tool(x.name.replace('.py', ''))
+		else:
+			from zipfile import PyZipFile
+			import re
+			waflibs = PyZipFile(waf_dir)
+			lst = waflibs.namelist()
+			for x in lst:
+				if not re.match("waflib/extras/%s" % var.replace("*", ".*"), var):
+					continue
+				f = os.path.basename(x)
+				doban = False
+				for b in ban:
+					r = b.replace("*", ".*")
+					if re.match(b, f):
+						doban = True
+				if not doban:
+					f = f.replace('.py', '')
+					load_tool(f)
 
 cache_modules = {}
 """
@@ -580,8 +614,6 @@ def load_tool(tool, tooldir=None):
 	"""
 	if tool == 'java':
 		tool = 'javaw' # jython
-	elif tool == 'compiler_cc':
-		tool = 'compiler_c' # TODO remove in waf 1.8
 	else:
 		tool = tool.replace('++', 'xx')
 
@@ -597,21 +629,15 @@ def load_tool(tool, tooldir=None):
 			for d in tooldir:
 				sys.path.remove(d)
 	else:
-		global waf_dir
-		try:
-			os.stat(os.path.join(waf_dir, 'waflib', 'extras', tool + '.py'))
-		except OSError:
+		for x in ('waflib.Tools.%s', 'waflib.extras.%s', 'waflib.%s', '%s'):
 			try:
-				os.stat(os.path.join(waf_dir, 'waflib', 'Tools', tool + '.py'))
-			except OSError:
-				d = tool # user has messed with sys.path
-			else:
-				d = 'waflib.Tools.%s' % tool
-		else:
-			d = 'waflib.extras.%s' % tool
-
-		__import__(d)
-		ret = sys.modules[d]
+				__import__(x % tool)
+				break
+			except ImportError:
+				x = None
+		if x is None: # raise an exception
+			__import__(tool)
+		ret = sys.modules[x % tool]
 		Context.tools[tool] = ret
 		return ret
 

@@ -36,8 +36,6 @@ List of commands to execute extracted from the command-line. This list is consum
 """
 
 lockfile = os.environ.get('WAFLOCK', '.lock-waf_%s_build' % sys.platform)
-try: cache_global = os.path.abspath(os.environ['WAFCACHE'])
-except KeyError: cache_global = ''
 platform = Utils.unversioned_sys_platform()
 
 
@@ -56,7 +54,6 @@ class opt_parser(optparse.OptionParser):
 		p('-j', '--jobs',     dest='jobs',    default=jobs, type='int', help='amount of parallel jobs (%r)' % jobs)
 		p('-k', '--keep',     dest='keep',    default=0,     action='count', help='keep running happily even if errors are found')
 		p('-v', '--verbose',  dest='verbose', default=0,     action='count', help='verbosity level -v -vv or -vvv [default: 0]')
-		p('--nocache',        dest='nocache', default=False, action='store_true', help='ignore the WAFCACHE (if set)')
 		p('--zones',          dest='zones',   default='',    action='store', help='debugging zones (task_gen, deps, tasks, etc)')
 
 		gr = optparse.OptionGroup(self, 'configure options')
@@ -101,7 +98,7 @@ class opt_parser(optparse.OptionParser):
 		"""
 		cmds_str = {}
 		for cls in Context.classes:
-			if not cls.cmd or cls.cmd == 'options':
+			if not cls.cmd or cls.cmd == 'options' or cls.cmd.startswith( '_' ):
 				continue
 
 			s = cls.__doc__ or ''

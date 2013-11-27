@@ -22,13 +22,20 @@ Example::
 			prompt   = 1, # 0 for the batch mode
 			)
 
-To configure with a special program use::
+Notes:
 
-	$ PDFLATEX=luatex waf configure
+- To configure with a special program, use::
+
+     $ PDFLATEX=luatex waf configure
+
+- This tool doesn't use the target attribute of the task generator
+  (``bld(target=...)``); the target file name is built from the source
+  base name and the out type(s)
+
 """
 
 import os, re
-from waflib import Utils, Task, Errors, Logs
+from waflib import Utils, Task, Errors, Logs, Node
 from waflib.TaskGen import feature, before_method
 
 re_bibunit = re.compile(r'\\(?P<type>putbib)\[(?P<file>[^\[\]]*)\]',re.M)
@@ -62,17 +69,20 @@ def bibunitscan(self):
 	Logs.debug("tex: found the following bibunit files: %s" % nodes)
 	return nodes
 
-exts_deps_tex = ['', '.ltx', '.tex', '.bib', '.pdf', '.png', '.eps', '.ps']
+exts_deps_tex = ['', '.ltx', '.tex', '.bib', '.pdf', '.png', '.eps', '.ps', '.sty']
 """List of typical file extensions included in latex files"""
 
 exts_tex = ['.ltx', '.tex']
 """List of typical file extensions that contain latex"""
 
-re_tex = re.compile(r'\\(?P<type>include|bibliography|putbib|includegraphics|input|import|bringin|lstinputlisting)(\[[^\[\]]*\])?{(?P<file>[^{}]*)}',re.M)
+re_tex = re.compile(r'\\(?P<type>usepackage|RequirePackage|include|bibliography([^\[\]{}]*)|putbib|includegraphics|input|import|bringin|lstinputlisting)(\[[^\[\]]*\])?{(?P<file>[^{}]*)}',re.M)
 """Regexp for expressions that may include latex files"""
 
 g_bibtex_re = re.compile('bibdata', re.M)
 """Regexp for bibtex files"""
+
+g_glossaries_re = re.compile('\\@newglossary', re.M)
+"""Regexp for expressions that create glossaries"""
 
 class tex(Task.Task):
 	"""
@@ -89,6 +99,11 @@ class tex(Task.Task):
 	makeindex_fun, _ = Task.compile_fun('${MAKEINDEX} ${MAKEINDEXFLAGS} ${SRCFILE}', shell=False)
 	makeindex_fun.__doc__ = """
 	Execute the program **makeindex**
+	"""
+
+	makeglossaries_fun, _ = Task.compile_fun('${MAKEGLOSSARIES} ${SRCFILE}', shell=False)
+	makeglossaries_fun.__doc__ = """
+	Execute the program **makeglossaries**
 	"""
 
 	def exec_command(self, cmd, **kw):
@@ -156,6 +171,15 @@ class tex(Task.Task):
 			code = node.read()
 			global re_tex
 			for match in re_tex.finditer(code):
+
+				multibib = match.group('type')
+				if multibib and multibib.startswith('bibliography'):
+					multibib = multibib[len('bibliography'):]
+					if multibib.startswith('style'):
+						continue
+				else:
+					multibib = None
+
 				for path in match.group('file').split(','):
 					if path:
 						add_name = True
@@ -174,6 +198,14 @@ class tex(Task.Task):
 									if found.name.endswith(ext):
 										parse_node(found)
 										break
+
+							# multibib stuff
+							if found and multibib and found.name.endswith('.bib'):
+								try:
+									self.multibibs.append(found)
+								except AttributeError:
+									self.multibibs = [found]
+
 							# no break, people are crazy
 						if add_name:
 							names.append(path)
@@ -210,13 +242,20 @@ class tex(Task.Task):
 				continue
 
 			if g_bibtex_re.findall(ct):
-				Logs.warn('calling bibtex')
+				Logs.info('calling bibtex')
 
 				self.env.env = {}
 				self.env.env.update(os.environ)
 				self.env.env.update({'BIBINPUTS': self.TEXINPUTS, 'BSTINPUTS': self.TEXINPUTS})
 				self.env.SRCFILE = aux_node.name[:-4]
 				self.check_status('error when calling bibtex', self.bibtex_fun())
+
+		for node in getattr(self, 'multibibs', []):
+			self.env.env = {}
+			self.env.env.update(os.environ)
+			self.env.env.update({'BIBINPUTS': self.TEXINPUTS, 'BSTINPUTS': self.TEXINPUTS})
+			self.env.SRCFILE = node.name[:-4]
+			self.check_status('error when calling bibtex', self.bibtex_fun())
 
 	def bibunits(self):
 		"""
@@ -231,7 +270,7 @@ class tex(Task.Task):
 			if bibunits:
 				fn  = ['bu' + str(i) for i in xrange(1, len(bibunits) + 1)]
 				if fn:
-					Logs.warn('calling bibtex on bibunits')
+					Logs.info('calling bibtex on bibunits')
 
 				for f in fn:
 					self.env.env = {'BIBINPUTS': self.TEXINPUTS, 'BSTINPUTS': self.TEXINPUTS}
@@ -247,9 +286,9 @@ class tex(Task.Task):
 			idx_path = self.idx_node.abspath()
 			os.stat(idx_path)
 		except OSError:
-			Logs.warn('index file %s absent, not calling makeindex' % idx_path)
+			Logs.info('index file %s absent, not calling makeindex' % idx_path)
 		else:
-			Logs.warn('calling makeindex')
+			Logs.info('calling makeindex')
 
 			self.env.SRCFILE = self.idx_node.name
 			self.env.env = {}
@@ -262,6 +301,25 @@ class tex(Task.Task):
 		p = self.inputs[0].parent.get_bld()
 		if os.path.exists(os.path.join(p.abspath(), 'btaux.aux')):
 			self.aux_nodes += p.ant_glob('*[0-9].aux')
+
+	def makeglossaries(self):
+		src_file = self.inputs[0].abspath()
+		base_file = os.path.basename(src_file)
+		base, _ = os.path.splitext(base_file)
+		for aux_node in self.aux_nodes:
+			try:
+				ct = aux_node.read()
+			except (OSError, IOError):
+				Logs.error('Error reading %s: %r' % aux_node.abspath())
+				continue
+
+			if g_glossaries_re.findall(ct):
+				if not self.env.MAKEGLOSSARIES:
+					raise Errors.WafError("The program 'makeglossaries' is missing!")
+				Logs.warn('calling makeglossaries')
+				self.env.SRCFILE = base
+				self.check_status('error when calling makeglossaries %s' % base, self.makeglossaries_fun())
+				return
 
 	def run(self):
 		"""
@@ -291,7 +349,7 @@ class tex(Task.Task):
 		# important, set the cwd for everybody
 		self.cwd = self.inputs[0].parent.get_bld().abspath()
 
-		Logs.warn('first pass on %s' % self.__class__.__name__)
+		Logs.info('first pass on %s' % self.__class__.__name__)
 
 		self.env.env = {}
 		self.env.env.update(os.environ)
@@ -306,6 +364,7 @@ class tex(Task.Task):
 		self.bibfile()
 		self.bibunits()
 		self.makeindex()
+		self.makeglossaries()
 
 		hash = ''
 		for i in range(10):
@@ -323,7 +382,7 @@ class tex(Task.Task):
 				break
 
 			# run the command
-			Logs.warn('calling %s' % self.__class__.__name__)
+			Logs.info('calling %s' % self.__class__.__name__)
 
 			self.env.env = {}
 			self.env.env.update(os.environ)
@@ -372,12 +431,15 @@ def apply_tex(self):
 
 	if getattr(self, 'deps', None):
 		deps = self.to_list(self.deps)
-		for filename in deps:
-			n = self.path.find_resource(filename)
-			if not n:
-				self.bld.fatal('Could not find %r for %r' % (filename, self))
-			if not n in deps_lst:
-				deps_lst.append(n)
+		for dep in deps:
+			if isinstance(dep, str):
+				n = self.path.find_resource(dep)
+				if not n:
+					self.bld.fatal('Could not find %r for %r' % (filename, self))
+				if not n in deps_lst:
+					deps_lst.append(n)
+			elif isinstance(dep, Node.Node):
+				deps_lst.append(dep)
 
 	for node in self.to_nodes(self.source):
 
@@ -422,7 +484,7 @@ def configure(self):
 	are not found.
 	"""
 	v = self.env
-	for p in 'tex latex pdflatex xelatex bibtex dvips dvipdf ps2pdf makeindex pdf2ps'.split():
+	for p in 'tex latex pdflatex xelatex bibtex dvips dvipdf ps2pdf makeindex pdf2ps makeglossaries'.split():
 		try:
 			self.find_program(p, var=p.upper())
 		except self.errors.ConfigurationError:

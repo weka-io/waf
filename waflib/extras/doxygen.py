@@ -9,15 +9,26 @@ Doxygen support
 Variables passed to bld():
 * doxyfile -- the Doxyfile to use
 
-ported from waf 1.5 (incomplete)
+When using this tool, the wscript will look like:
+
+	def options(opt):
+		opt.load('doxygen')
+
+	def configure(conf):
+		conf.load('doxygen')
+		# check conf.env.DOXYGEN, if it is mandatory
+
+	def build(bld):
+		if bld.env.DOXYGEN:
+			bld(features="doxygen", doxyfile='Doxyfile', ...)
 """
 
 from fnmatch import fnmatchcase
 import os, os.path, re, stat
-from waflib import Task, Utils, Node, Logs
+from waflib import Task, Utils, Node, Logs, Errors
 from waflib.TaskGen import feature
 
-DOXY_STR = '${DOXYGEN} - '
+DOXY_STR = '"${DOXYGEN}" - '
 DOXY_FMTS = 'html latex man rft xml'.split()
 DOXY_FILE_PATTERNS = '*.' + ' *.'.join('''
 c cc cxx cpp c++ java ii ixx ipp i++ inl h hh hxx hpp h++ idl odl cs php php3
@@ -97,19 +108,17 @@ class doxygen(Task.Task):
 		return Task.Task.runnable_status(self)
 
 	def scan(self):
-		if self.pars.get('RECURSIVE') == 'YES':
-			Logs.warn("Doxygen RECURSIVE dependencies are not supported")
-
-		exclude_patterns = self.pars.get('EXCLUDE_PATTERNS', '').split()
-		file_patterns = self.pars.get('FILE_PATTERNS', '').split()
+		exclude_patterns = self.pars.get('EXCLUDE_PATTERNS','').split()
+		file_patterns = self.pars.get('FILE_PATTERNS','').split()
 		if not file_patterns:
 			file_patterns = DOXY_FILE_PATTERNS
-
+		if self.pars.get('RECURSIVE') == 'YES':
+			file_patterns = ["**/%s" % pattern for pattern in file_patterns]
 		nodes = []
 		names = []
 		for node in self.doxy_inputs:
 			if os.path.isdir(node.abspath()):
-				for m in node.ant_glob(file_patterns):
+				for m in node.ant_glob(incl=file_patterns, excl=exclude_patterns):
 					nodes.append(m)
 			else:
 				nodes.append(node)
@@ -117,8 +126,7 @@ class doxygen(Task.Task):
 
 	def run(self):
 		dct = self.pars.copy()
-		# TODO will break if paths have spaces
-		dct['INPUT'] = ' '.join([x.abspath() for x in self.doxy_inputs])
+		dct['INPUT'] = ' '.join(['"%s"' % x.abspath() for x in self.doxy_inputs])
 		code = '\n'.join(['%s = %s' % (x, dct[x]) for x in self.pars])
 		code = code.encode() # for python 3
 		#fmt = DOXY_STR % (self.inputs[0].parent.abspath())
@@ -184,6 +192,13 @@ def process_doxy(self):
 			tsk.env['TAROPTS'] = ['cf']
 
 def configure(conf):
-	conf.find_program('doxygen', var='DOXYGEN')
-	conf.find_program('tar', var='TAR')
+	'''
+	Check if doxygen and tar commands are present in the system
 
+	If the commands are present, then conf.env.DOXYGEN and conf.env.TAR
+	variables will be set. Detection can be controlled by setting DOXYGEN and
+	TAR environmental variables.
+	'''
+
+	conf.find_program('doxygen', var='DOXYGEN', mandatory=False)
+	conf.find_program('tar', var='TAR', mandatory=False)

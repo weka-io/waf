@@ -447,10 +447,11 @@ class Dist(Context.Context):
 		try:
 			return self.excl
 		except AttributeError:
-			self.excl = Node.exclude_regs + ' **/waf-1.7.* **/.waf-1.7* **/waf3-1.7.* **/.waf3-1.7* **/*~ **/*.rej **/*.orig **/*.pyc **/*.pyo **/*.bak **/*.swp **/.lock-w*'
-			nd = self.root.find_node(Context.out_dir)
-			if nd:
-				self.excl += ' ' + nd.path_from(self.base_path)
+			self.excl = Node.exclude_regs + ' **/waf-1.8.* **/.waf-1.8* **/waf3-1.8.* **/.waf3-1.8* **/*~ **/*.rej **/*.orig **/*.pyc **/*.pyo **/*.bak **/*.swp **/.lock-w*'
+			if Context.out_dir:
+				nd = self.root.find_node(Context.out_dir)
+				if nd:
+					self.excl += ' ' + nd.path_from(self.base_path)
 			return self.excl
 
 	def get_files(self):

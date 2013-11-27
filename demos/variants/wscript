@@ -98,13 +98,29 @@ def init(ctx):
 #		the_variant = 'debug'
 #	else:
 #		the_variant = env.the_variant or debug
-#	
+#
 #	if getattr(Options.options, 'the_variant', ''):
 #		if Options.options.the_variant != the_variant:
 #			the_variant = env.the_variant = Options.options.the_variant
 #			env.store('build/c4che/foo.txt')
-#	
+#
 #	for y in (BuildContext, CleanContext, InstallContext, UninstallContext):
 #		class tmp(y):
 #			variant = the_variant
+# --------------------------
+# Or, if you like to have a command-line flag
+#   - add ctx.load('variant') to options and init functions
+#   - add --variant=<name of the variant> to the command line
+#def options(ctx):
+#    ctx.add_option('--variant', action='store', default='', help='set the variant name')
+#def init(ctx):
+#    from waflib.Options import options
+#    from waflib.Build import BuildContext, CleanContext, InstallContext, UninstallContext
+#    from waflib.Configure import ConfigurationContext
+#    for y in (BuildContext, CleanContext, InstallContext, UninstallContext, ConfigurationContext):
+#        name = y.__name__.replace('Context','').lower()
+#        class tmp(y):
+#            cmd = name
+#            variant = options.variant
+#
 

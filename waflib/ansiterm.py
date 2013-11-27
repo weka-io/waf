@@ -1,9 +1,23 @@
-import sys, os
+#!/usr/bin/env python
+# encoding: utf-8
+
+"""
+Emulate a vt100 terminal in cmd.exe
+
+By wrapping sys.stdout / sys.stderr with Ansiterm,
+the vt100 escape characters will be interpreted and
+the equivalent actions will be performed with Win32
+console commands.
+
+"""
+
+import sys, os, re, threading
+
 try:
 	if not (sys.stderr.isatty() and sys.stdout.isatty()):
 		raise ValueError('not a tty')
 
-	from ctypes import *
+	from ctypes import Structure, windll, c_short, c_ulong, c_int, byref, c_wchar
 
 	class COORD(Structure):
 		_fields_ = [("X", c_short), ("Y", c_short)]
@@ -26,8 +40,6 @@ try:
 except Exception:
 	pass
 else:
-	import re, threading
-
 	is_vista = getattr(sys, "getwindowsversion", None) and sys.getwindowsversion()[0] >= 6
 
 	try:
@@ -50,9 +62,7 @@ else:
 			self.hconsole = windll.kernel32.GetStdHandle(STD_OUTPUT_HANDLE)
 			self.cursor_history = []
 			self.orig_sbinfo = CONSOLE_SCREEN_BUFFER_INFO()
-			self.orig_csinfo = CONSOLE_CURSOR_INFO()
 			windll.kernel32.GetConsoleScreenBufferInfo(self.hconsole, byref(self.orig_sbinfo))
-			windll.kernel32.GetConsoleCursorInfo(hconsole, byref(self.orig_csinfo))
 
 		def screen_buffer_info(self):
 			sbinfo = CONSOLE_SCREEN_BUFFER_INFO()
@@ -231,9 +241,9 @@ else:
 
 			TINY_STEP = 3000
 			for x in range(0, len(txt), TINY_STEP):
-			    # According MSDN, size should NOT exceed 64 kb (issue #746)
-			    tiny = txt[x : x + TINY_STEP]
-			    writeconsole(self.hconsole, tiny, len(tiny), byref(chars_written), None)
+				# According MSDN, size should NOT exceed 64 kb (issue #746)
+				tiny = txt[x : x + TINY_STEP]
+				writeconsole(self.hconsole, tiny, len(tiny), byref(chars_written), None)
 
 		def flush(self):
 			pass

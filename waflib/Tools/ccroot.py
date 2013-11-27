@@ -251,6 +251,8 @@ def use_rec(self, name, **kw):
 
 	p = self.tmp_use_prec
 	for x in self.to_list(getattr(y, 'use', [])):
+		if self.env["STLIB_" + x]:
+			continue
 		try:
 			p[x].append(name)
 		except KeyError:
@@ -502,7 +504,10 @@ def apply_vnum(self):
 		self.env.append_value('LINKFLAGS', v.split())
 
 	# the following task is just to enable execution from the build dir :-/
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/waf-1.8
 	if self.env.DEST_OS != 'openbsd':
 		self.create_task('vnum', node, [node.parent.find_or_declare(name2), node.parent.find_or_declare(name3)])
 

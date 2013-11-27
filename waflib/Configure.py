@@ -434,11 +434,11 @@ def cmd_to_list(self, cmd):
 	return cmd
 
 @conf
-def check_waf_version(self, mini='1.6.99', maxi='1.8.0'):
+def check_waf_version(self, mini='1.7.99', maxi='1.9.0'):
 	"""
 	Raise a Configuration error if the Waf version does not strictly match the given bounds::
 
-		conf.check_waf_version(mini='1.7.0', maxi='1.8.0')
+		conf.check_waf_version(mini='1.8.0', maxi='1.9.0')
 
 	:type  mini: number, tuple or string
 	:param mini: Minimum required version
@@ -485,6 +485,10 @@ def find_program(self, filename, **kw):
 	:type var: string
 	:param ext: list of extensions for the binary (do not add an extension for portability)
 	:type ext: list of string
+	:param msg: name to display in the log, by default filename is used
+	:type msg: string
+	:param interpreter: interpreter for the program
+	:type interpreter: ConfigSet variable key
 	"""
 
 	exts = kw.get('exts', Utils.is_win32 and '.exe,.com,.bat,.cmd' or ',.sh,.pl,.py')
@@ -531,42 +535,24 @@ def find_program(self, filename, **kw):
 	if not ret and Utils.winreg:
 		ret = Utils.get_registry_app_path(Utils.winreg.HKEY_LOCAL_MACHINE, filename)
 
-	self.msg('Checking for program ' + ','.join(filename), ret or False)
+	msg = kw.get('msg', ', '.join(filename))
+	self.msg("Checking for program '%s'" % msg, ret or False)
 	self.to_log('find program=%r paths=%r var=%r -> %r' % (filename, path_list, var, ret))
 
 	if not ret:
 		self.fatal(kw.get('errmsg', '') or 'Could not find the program %s' % ','.join(filename))
 
-	if var:
-		self.env[var] = ret
-	return ret
+	ret = self.cmd_to_list(ret)
 
-
-@conf
-def find_perl_program(self, filename, path_list=[], var=None, environ=None, exts=''):
-	"""
-	Search for a perl program on the operating system
-
-	:param filename: file to search for
-	:type filename: string
-	:param path_list: list of paths to look into
-	:type path_list: list of string
-	:param var: store the results into *conf.env.var*
-	:type var: string
-	:param environ: operating system environment to pass to :py:func:`waflib.Configure.find_program`
-	:type environ: dict
-	:param exts: extensions given to :py:func:`waflib.Configure.find_program`
-	:type exts: list
-	"""
-
-	try:
-		app = self.find_program(filename, path_list=path_list, var=var, environ=environ, exts=exts)
-	except Exception:
-		self.find_program('perl', var='PERL')
-		app = self.find_file(filename, os.environ['PATH'].split(os.pathsep))
-		if not app:
-			raise
+	interpreter = kw.get('interpreter', None)
+	if interpreter is None:
+		if not Utils.check_exe(ret[0]):
+			self.fatal('Program %s is not executable' % ret)
 		if var:
-			self.env[var] = Utils.to_list(self.env['PERL']) + [app]
-	self.msg('Checking for %r' % filename, app)
+			self.env[var] = ret
+	else:
+		if var:
+			self.env[var] = self.env[interpreter] + ret
+
+	return ret
 
