@@ -1147,8 +1147,12 @@ def get_suncc_version(conf, cc):
 	cmd = cc + ['-V']
 	try:
 		out, err = conf.cmd_and_log(cmd, output=0)
-	except Errors.WafError:
-		conf.fatal('Could not find suncc %r' % cmd)
+	except Errors.WafError as e:
+		# Older versions of the compiler exit with non-zero status when reporting their version
+		if not (hasattr(e, 'returncode') and hasattr(e, 'stdout') and hasattr(e, 'stderr')):
+			conf.fatal('Could not find suncc %r' % cmd)
+		out = e.stdout
+		err = e.stderr
 
 	version = (out or err)
 	version = version.split('\n')[0]
