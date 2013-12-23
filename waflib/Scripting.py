@@ -568,7 +568,7 @@ def autoconfigure(execute_method):
 			else:
 				h = 0
 				for f in env['files']:
-					h = hash((h, Utils.readf(f, 'rb')))
+					h = Utils.h_list((h, Utils.readf(f, 'rb')))
 				do_config = h != env.hash
 
 		if do_config:

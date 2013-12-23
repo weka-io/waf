@@ -502,7 +502,8 @@ def quote_define_name(s):
 
 def h_list(lst):
 	"""
-	Hash lists. For tuples, using hash(tup) is much more efficient
+	Hash lists. For tuples, using hash(tup) is much more efficient,
+	except on python >= 3.3 where hash randomization assumes everybody is running a web application.
 
 	:param lst: list to hash
 	:type lst: list of strings

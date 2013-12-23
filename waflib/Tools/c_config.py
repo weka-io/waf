@@ -611,14 +611,12 @@ def post_check(self, *k, **kw):
 
 		for k in _vars:
 			lk = k.lower()
-			if k == 'INCLUDES': lk = 'includes'
-			if k == 'DEFINES': lk = 'defines'
 			if lk in kw:
 				val = kw[lk]
 				# remove trailing slash
 				if isinstance(val, str):
 					val = val.rstrip(os.path.sep)
-				self.env.append_unique(k + '_' + kw['uselib_store'], val)
+				self.env.append_unique(k + '_' + kw['uselib_store'], Utils.to_list(val))
 	return is_success
 
 @conf
