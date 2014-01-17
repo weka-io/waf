@@ -4,7 +4,7 @@
 top = '.'
 out = 'bin'
 
-import os
+import os, re
 from waflib import Utils
 
 def configure(conf):
@@ -23,6 +23,7 @@ def build(bld):
 		install_path = '/tmp/uff/', # installation path, optional
 		chmod        = Utils.O755, # installation mode, optional
 		PREFIX       = bld.env.PREFIX, # variables to use in the substitution
+		re_m4        = re.compile('%%(\w+)%%', re.M), # custom substitution
 		BINDIR       = bld.env.BINDIR)
 
 	# if you are using an external dict, here is to merge the key/values:
@@ -40,7 +41,7 @@ def build(bld):
 	def hlink(task):
 		try:
 			link = os.link
-		except NameError:
+		except AttributeError:
 			task.outputs[0].write(task.inputs[0].read('rb'), 'wb')
 		else:
 			for x, y in zip(task.inputs, task.outputs):

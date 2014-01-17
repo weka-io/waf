@@ -23,7 +23,7 @@ def build(bld):
 			if ret != 0:
 				raise Exception("command failed in %s: %s" % (task.generator.cwd, cmd))
 
-	waf_dirs = [ os.path.join(bld.path.abspath(), "snippets", d) for d in ["waf-1", "waf-2"] ]
+	waf_dirs = [ os.path.join(bld.path.abspath(), "snippets", d) for d in ("waf-1", "waf-2") ]
 	for d in waf_dirs:
 		bld(
 		 rule=waf_cmd,
@@ -32,7 +32,7 @@ def build(bld):
 		 name=d,
 		)
 
-	make_dirs = [ os.path.join(bld.path.abspath(), "snippets", d) for d in ["make-1", "make-2"] ]
+	make_dirs = [ os.path.join(bld.path.abspath(), "snippets", d) for d in ("make-1", "make-2") ]
 	for d in make_dirs:
 		bld(
 		 rule="make -B > output",

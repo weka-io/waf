@@ -134,7 +134,7 @@ def link_after_masters(self):
 # Modify the c and cxx task classes - in theory it would be better to
 # create subclasses and to re-map the c/c++ extensions
 #
-for x in ['c', 'cxx']:
+for x in ('c', 'cxx'):
 	t = Task.classes[x]
 	def run(self):
 		pass

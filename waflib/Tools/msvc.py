@@ -269,7 +269,7 @@ def gather_msvc_detected_versions():
 	#Detected MSVC versions!
 	version_pattern = re.compile('^(\d\d?\.\d\d?)(Exp)?$')
 	detected_versions = []
-	for vcver,vcvar in [('VCExpress','Exp'), ('VisualStudio','')]:
+	for vcver,vcvar in (('VCExpress','Exp'), ('VisualStudio','')):
 		try:
 			prefix = 'SOFTWARE\\Wow6432node\\Microsoft\\'+vcver
 			all_versions = Utils.winreg.OpenKey(Utils.winreg.HKEY_LOCAL_MACHINE, prefix)
@@ -495,7 +495,7 @@ def gather_intel_composer_versions(conf, versions):
 					setattr(conf, compilervars_warning_attr, False)
 					patch_url = 'http://software.intel.com/en-us/forums/topic/328487'
 					compilervars_arch = os.path.join(path, 'bin', 'compilervars_arch.bat')
-					for vscomntool in ['VS110COMNTOOLS', 'VS100COMNTOOLS']:
+					for vscomntool in ('VS110COMNTOOLS', 'VS100COMNTOOLS'):
 						if vscomntool in os.environ:
 							vs_express_path = os.environ[vscomntool] + r'..\IDE\VSWinExpress.exe'
 							dev_env_path = os.environ[vscomntool] + r'..\IDE\devenv.exe'

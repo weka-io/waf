@@ -324,7 +324,7 @@ def check_boost(self, *k, **kw):
 	if params.get('linkage_autodetect', False):
 		self.start_msg("Attempting to detect boost linkage flags")
 		toolset = self.boost_get_toolset(kw.get('toolset', ''))
-		if toolset in ['vc']:
+		if toolset in ('vc',):
 			# disable auto-linking feature, causing error LNK1181
 			# because the code wants to be linked against
 			self.env['DEFINES_%s' % var] += ['BOOST_ALL_NO_LIB']

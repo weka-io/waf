@@ -51,6 +51,8 @@ class opt_parser(optparse.OptionParser):
 		self.ctx = ctx
 
 		jobs = ctx.jobs()
+		color = os.environ.get('NOCOLOR', '') and 'no' or 'auto'
+		p('-c', '--color',    dest='colors',  default=color, action='store', help='whether to use colors (yes/no/auto) [default: auto]', choices=('yes', 'no', 'auto'))
 		p('-j', '--jobs',     dest='jobs',    default=jobs, type='int', help='amount of parallel jobs (%r)' % jobs)
 		p('-k', '--keep',     dest='keep',    default=0,     action='count', help='keep running happily even if errors are found')
 		p('-v', '--verbose',  dest='verbose', default=0,     action='count', help='verbosity level -v -vv or -vvv [default: 0]')
@@ -106,7 +108,7 @@ class opt_parser(optparse.OptionParser):
 
 		if Context.g_module:
 			for (k, v) in Context.g_module.__dict__.items():
-				if k in ['options', 'init', 'shutdown']:
+				if k in ('options', 'init', 'shutdown'):
 					continue
 
 				if type(v) is type(Context.create_context):
@@ -241,6 +243,9 @@ class OptionsContext(Context.Context):
 
 		if options.verbose >= 1:
 			self.load('errcheck')
+
+		colors = {'yes' : 2, 'auto' : 1, 'no' : 0}[options.colors]
+		Logs.enable_colors(colors)
 
 	def execute(self):
 		"""

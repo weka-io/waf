@@ -19,6 +19,8 @@ except ImportError:
 		"""A deque for Python 2.3 which does not have one"""
 		def popleft(self):
 			return self.pop(0)
+		def appendleft(self, x):
+			self.insert(0, x)
 try:
 	import _winreg as winreg
 except ImportError:
@@ -46,6 +48,10 @@ except ImportError:
 try:
 	import threading
 except ImportError:
+	if not 'JOBS' in os.environ:
+		# no threading :-(
+		os.environ['JOBS'] = '1'
+
 	class threading(object):
 		"""
 			A fake threading class for platforms lacking the threading module.
@@ -132,11 +138,6 @@ except ImportError:
 			return self.lst
 
 is_win32 = sys.platform in ('win32', 'cli')
-
-# we should have put this in the Logs.py file instead :-/
-indicator = '\x1b[K%s%s%s\r'
-if is_win32 and 'NOCOLOR' in os.environ:
-	indicator = '%s%s%s\r'
 
 def readf(fname, m='r', encoding='ISO8859-1'):
 	"""
@@ -465,13 +466,13 @@ def check_exe(name):
 
 	fpath, fname = os.path.split(name)
 	if fpath and is_exe(name):
-		return name
+		return os.path.abspath(name)
 	else:
 		for path in os.environ["PATH"].split(os.pathsep):
 			path = path.strip('"')
 			exe_file = os.path.join(path, name)
 			if is_exe(exe_file):
-				return exe_file
+				return os.path.abspath(exe_file)
 	return None
 
 def def_attrs(cls, **kw):
@@ -600,7 +601,7 @@ def unversioned_sys_platform():
 		elif s in ('SunOS', 'Solaris'):
 			return 'sunos'
 		else: s = s.lower()
-	
+
 	# powerpc == darwin for our purposes
 	if s == 'powerpc':
 		return 'darwin'

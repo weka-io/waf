@@ -6,7 +6,7 @@
 Tasks represent atomic operations such as processes.
 """
 
-import os, shutil, re, tempfile
+import os, shutil, re, tempfile, sys
 from waflib import Utils, Logs, Errors
 
 # task states
@@ -246,7 +246,16 @@ class TaskBase(evil):
 
 	def log_display(self, bld):
 		"Write the execution status on the context logger"
-		bld.to_log(self.display())
+		stderr = self.generator.bld.progress_bar > 0
+		c1 = c2 = ''
+		if stderr:
+			c1 = Logs.colors.cursor_off
+			c2 = Logs.colors.cursor_on
+		if bld.logger:
+			fun = bld.logger.info
+		else:
+			fun = Logs.info
+		fun(self.display(), extra={'stream': sys.stderr, 'terminator':'', 'c1': c1, 'c2' : c2})
 
 	def display(self):
 		"""

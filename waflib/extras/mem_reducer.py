@@ -46,16 +46,16 @@ def set_precedence_constraints(tasks):
 		cstr_groups[h].append(x)
 
 	# create sets which can be reused for all tasks
-	for k in cstr_groups.iterkeys():
+	for k in cstr_groups.keys():
 		cstr_groups[k] = set(cstr_groups[k])
 
 	# this list should be short
-	for key1, key2 in itertools.combinations(cstr_groups.iterkeys(), 2):
+	for key1, key2 in itertools.combinations(cstr_groups.keys(), 2):
 		group1 = cstr_groups[key1]
 		group2 = cstr_groups[key2]
 		# get the first entry of the set
-		t1 = iter(group1).next()
-		t2 = iter(group2).next()
+		t1 = next(iter(group1))
+		t2 = next(iter(group2))
 
 		# add the constraints based on the comparisons
 		if Task.is_before(t1, t2):
@@ -85,97 +85,27 @@ def get_out(self):
 		pass
 	else:
 		for k in ws:
-			k.remove(tsk)
+			try:
+				k.remove(tsk)
+			except KeyError:
+				pass
 
 	return tsk
 Runner.Parallel.get_out = get_out
 
-if 1:
-	def start(self):
-		self.total = self.bld.total()
+def skip(self, tsk):
+	tsk.hasrun = Task.SKIPPED
 
-		while not self.stop:
-
-			self.refill_task_list()
-
-			# consider the next task
-			tsk = self.get_next_task()
-			if not tsk:
-				if self.count:
-					# tasks may add new ones after they are run
-					continue
-				else:
-					# no tasks to run, no tasks running, time to exit
-					break
-
-			if tsk.hasrun:
-				# if the task is marked as "run", just skip it
-				self.processed += 1
-				continue
-
-			if self.stop: # stop immediately after a failure was detected
-				break
-
+	# shrinking sets
+	try:
+		ws = tsk.waiting_sets
+	except AttributeError:
+		pass
+	else:
+		for k in ws:
 			try:
-				st = tsk.runnable_status()
-			except Exception:
-				self.processed += 1
-				# TODO waf 1.7 this piece of code should go in the error_handler
-				tsk.err_msg = Utils.ex_stack()
-				if not self.stop and self.bld.keep:
-					tsk.hasrun = Task.SKIPPED
-					if self.bld.keep == 1:
-						# if -k stop at the first exception, if -kk try to go as far as possible
-						if Logs.verbose > 1 or not self.error:
-							self.error.append(tsk)
-						self.stop = True
-					else:
-						if Logs.verbose > 1:
-							self.error.append(tsk)
-					continue
-				tsk.hasrun = Task.EXCEPTION
-				self.error_handler(tsk)
-				continue
-
-			if st == Task.ASK_LATER:
-				self.postpone(tsk)
-			elif st == Task.SKIP_ME:
-				self.processed += 1
-				tsk.hasrun = Task.SKIPPED
-				self.add_more_tasks(tsk)
-
-				# shrinking sets
-				try:
-					ws = tsk.waiting_sets
-				except AttributeError:
-					pass
-				else:
-					for k in ws:
-						k.remove(tsk)
-
-			else:
-				# run me: put the task in ready queue
-				tsk.position = (self.processed, self.total)
-				self.count += 1
-				tsk.master = self
-				self.processed += 1
-
-				if self.numjobs == 1:
-					tsk.process()
-				else:
-					self.add_task(tsk)
-
-		# self.count represents the tasks that have been made available to the consumer threads
-		# collect all the tasks after an error else the message may be incomplete
-		while self.error and self.count:
-			self.get_out()
-
-		#print loop
-		assert (self.count == 0 or self.stop)
-
-		# free the task pool, if any
-		self.free_task_pool()
-
-	Runner.Parallel.start = start
-
+				k.remove(tsk)
+			except KeyError:
+				pass
+Runner.Parallel.skip = skip
 

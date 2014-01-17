@@ -155,7 +155,7 @@ def ti_dsplink_set_platform_flags(cfg, splat, dsp, dspbios_ver, board):
 	
 	cfg.env.LINKFLAGS_DSPLINK += [
 	 opj(cfg.env.TI_DSPLINK_DIR, 'dsplink', 'dsp', 'export', 'BIN', 'DspBios', splat, board+'_0', 'RELEASE', 'dsplink%s.lib' % x)
-	 for x in ['', 'pool', 'mpcs', 'mplist', 'msg', 'data', 'notify', 'ringio']
+	 for x in ('', 'pool', 'mpcs', 'mplist', 'msg', 'data', 'notify', 'ringio')
 	]
 
 

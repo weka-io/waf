@@ -197,7 +197,7 @@ def check_fortran_verbose_flag(self, *k, **kw):
 	Check what kind of verbose (-v) flag works, then set it to env.FC_VERBOSE_FLAG
 	"""
 	self.start_msg('fortran link verbose flag')
-	for x in ['-v', '--verbose', '-verbose', '-V']:
+	for x in ('-v', '--verbose', '-verbose', '-V'):
 		try:
 			self.check_cc(
 				features = 'fc fcprogram_test',
@@ -395,9 +395,9 @@ def mangling_schemes():
 	(used in check_fortran_mangling)
 	the order is tuned for gfortan
 	"""
-	for u in ['_', '']:
-		for du in ['', '_']:
-			for c in ["lower", "upper"]:
+	for u in ('_', ''):
+		for du in ('', '_'):
+			for c in ("lower", "upper"):
 				yield (u, du, c)
 
 def mangle_name(u, du, c, name):
@@ -451,7 +451,7 @@ def set_lib_pat(self):
 
 @conf
 def detect_openmp(self):
-	for x in ['-fopenmp','-openmp','-mp','-xopenmp','-omp','-qsmp=omp']:
+	for x in ('-fopenmp','-openmp','-mp','-xopenmp','-omp','-qsmp=omp'):
 		try:
 			self.check_fc(
 				msg='Checking for OpenMP flag %s' % x,

@@ -7,6 +7,8 @@ NEW IN WAF 1.8.0
 * LaTeX multibib #1345
 * Various improvements in the Python detection and processing
 * Rst document processing
+* Console handling improvements
+* Properly-sized progress bar on windows
 
 NEW IN WAF 1.7.11
 -----------------

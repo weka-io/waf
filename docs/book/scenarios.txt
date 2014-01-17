@@ -380,7 +380,7 @@ def transform_strings(self):
 			if isinstance(val, str):
 				setattr(self, x, Utils.subst_vars(val, self.env)) <4>
 			elif isinstance(val, list):
-				for i in xrange(len(val)):
+				for i in range(len(val)):
 					if isinstance(val[i], str):
 						val[i] = Utils.subst_vars(val[i], self.env)
 ---------------

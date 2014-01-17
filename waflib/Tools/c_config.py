@@ -540,7 +540,7 @@ def validate_c(self, kw):
 		if not 'errmsg' in kw:
 			kw['errmsg'] = 'no'
 
-	for (flagsname,flagstype) in [('cxxflags','compiler'), ('cflags','compiler'), ('linkflags','linker')]:
+	for (flagsname,flagstype) in (('cxxflags','compiler'), ('cflags','compiler'), ('linkflags','linker')):
 		if flagsname in kw:
 			if not 'msg' in kw:
 				kw['msg'] = 'Checking for %s flags %s' % (flagstype, kw[flagsname])
@@ -569,8 +569,8 @@ def validate_c(self, kw):
 
 	if 'define_name' in kw:
 		self.undefine(kw['define_name'])
-
-	assert 'msg' in kw, 'invalid parameters, read http://freehackers.org/~tnagy/wafbook/single.html#config_helpers_c'
+	if not 'msg' in kw:
+		self.fatal('missing "msg" in conf.check(...)')
 
 @conf
 def post_check(self, *k, **kw):

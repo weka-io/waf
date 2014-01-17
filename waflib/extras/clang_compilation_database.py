@@ -14,9 +14,14 @@ Usage:
         conf.load('clang_compilation_database')
 """
 
-import json
+import sys, os, json, shlex, pipes
 from waflib import Logs, TaskGen
 from waflib.Tools import c, cxx
+
+if sys.hexversion >= 0x3030000:
+	quote = shlex.quote
+else:
+	quote = pipes.quote
 
 @TaskGen.feature('*')
 @TaskGen.after_method('process_use')
@@ -33,21 +38,29 @@ def collect_compilation_db_tasks(self):
 			clang_db.append(task)
 
 def write_compilation_database(ctx):
-	"Write the clang compilation database as json"
+	"Write the clang compilation database as JSON"
 	database_file = ctx.bldnode.make_node('compile_commands.json')
-	Logs.info("Store compile comands in %s" % database_file.path_from(ctx.path))
-	clang_db = dict((x["file"], x) for x in json.load(database_file))
+	Logs.info("Build commands will be stored in %s" % database_file.path_from(ctx.path))
+	try:
+		root = json.load(database_file)
+	except IOError:
+		root = []
+	clang_db = dict((x["file"], x) for x in root)
 	for task in getattr(ctx, 'clang_compilation_database_tasks', []):
 		try:
 			cmd = task.last_cmd
 		except AttributeError:
 			continue
-		filename = task.inputs[0].abspath()
+		directory = getattr(task, 'cwd', ctx.variant_dir)
+		f_node = task.inputs[0]
+		filename = os.path.relpath(f_node.abspath(), directory)
+		cmd = " ".join(map(quote, cmd))
 		entry = {
-			"directory" : getattr(task, 'cwd', ctx.variant_dir),
-			"command"   : " ".join(cmd),
-			"file"	  : filename,
+			"directory": directory,
+			"command": cmd,
+			"file": filename,
 		}
 		clang_db[filename] = entry
-	database_file.write(json.dumps(clang_db.values(), indent=2))
+	root = list(clang_db.values())
+	database_file.write(json.dumps(root, indent=2))
 

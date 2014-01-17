@@ -63,7 +63,7 @@ def waf_entry_point(current_directory, version, wafdir):
 				pass
 			else:
 				# check if the folder was not moved
-				for x in [env.run_dir, env.top_dir, env.out_dir]:
+				for x in (env.run_dir, env.top_dir, env.out_dir):
 					if Utils.is_win32:
 						if cur == x:
 							load = True
@@ -170,7 +170,7 @@ def set_main_module(file_path):
 		name = obj.__name__
 		if not name in Context.g_module.__dict__:
 			setattr(Context.g_module, name, obj)
-	for k in [update, dist, distclean, distcheck, update]:
+	for k in (update, dist, distclean, distcheck, update):
 		set_def(k)
 	# add dummy init and shutdown functions if they're not defined
 	if not 'init' in Context.g_module.__dict__:
@@ -193,7 +193,7 @@ def parse_options():
 
 	# process some internal Waf options
 	Logs.verbose = Options.options.verbose
-	Logs.init_log()
+	#Logs.init_log()
 
 	if Options.options.zones:
 		Logs.zones = Options.options.zones.split(',')
@@ -260,7 +260,7 @@ def distclean_dir(dirname):
 				except OSError:
 					Logs.warn('Could not remove %r' % fname)
 
-	for x in [Context.DBFILE, 'config.log']:
+	for x in (Context.DBFILE, 'config.log'):
 		try:
 			os.remove(x)
 		except OSError:

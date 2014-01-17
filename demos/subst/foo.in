@@ -1,2 +1,2 @@
-prefix: @PREFIX@
+prefix: %PREFIX%
 bindir: @BINDIR@

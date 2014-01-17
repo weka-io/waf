@@ -361,7 +361,7 @@ def apply_qt5(self):
 	for flag in self.to_list(self.env['CXXFLAGS']):
 		if len(flag) < 2: continue
 		f = flag[0:2]
-		if f in ['-D', '-I', '/D', '/I']:
+		if f in ('-D', '-I', '/D', '/I'):
 			if (f[0] == '/'):
 				lst.append('-' + flag[1:])
 			else:
@@ -504,7 +504,7 @@ def find_qt5_binaries(self):
 	# keep the one with the highest version
 	cand = None
 	prev_ver = ['5', '0', '0']
-	for qmk in ['qmake-qt5', 'qmake5', 'qmake']:
+	for qmk in ('qmake-qt5', 'qmake5', 'qmake'):
 		try:
 			qmake = self.find_program(qmk, path_list=paths)
 		except self.errors.ConfigurationError:

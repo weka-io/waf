@@ -17,7 +17,7 @@ we will need a testcase for this (overriding the function
 Task.set_file_constraints is trivial)
 """
 
-import stat
+import stat, os
 from waflib import Utils, Task
 from waflib.TaskGen import feature
 

@@ -82,7 +82,7 @@ def feature_py(self):
 		else:
 			pyd = y.abspath ()
 
-		for ext in ["pyc", "pyo"]:
+		for ext in ("pyc", "pyo"):
 			if install_from:
 				pyobj = self.path.get_bld ().make_node (y
 														.change_ext (".%s" % ext)

@@ -108,7 +108,7 @@ class task_gen(object):
 		"""for debugging purposes"""
 		lst = []
 		for x in self.__dict__.keys():
-			if x not in ['env', 'bld', 'compiled_tasks', 'tasks']:
+			if x not in ('env', 'bld', 'compiled_tasks', 'tasks'):
 				lst.append("%s=%s" % (x, repr(getattr(self, x))))
 		return "bld(%s) in %s" % (", ".join(lst), self.path.abspath())
 
@@ -284,9 +284,9 @@ class task_gen(object):
 		"""
 		newobj = self.bld()
 		for x in self.__dict__:
-			if x in ['env', 'bld']:
+			if x in ('env', 'bld'):
 				continue
-			elif x in ['path', 'features']:
+			elif x in ('path', 'features'):
 				setattr(newobj, x, getattr(self, x))
 			else:
 				setattr(newobj, x, copy.copy(getattr(self, x)))
@@ -585,7 +585,7 @@ def process_rule(self):
 		if getattr(self, 'always', None):
 			Task.always_run(cls)
 
-		for x in ['after', 'before', 'ext_in', 'ext_out']:
+		for x in ('after', 'before', 'ext_in', 'ext_out'):
 			setattr(cls, x, getattr(self, x, []))
 
 		if getattr(self, 'cache_rule', 'True'):
@@ -694,7 +694,8 @@ class subst_pc(Task.Task):
 				lst.append(g(1))
 				return "%%(%s)s" % g(1)
 			return ''
-		code = re_m4.sub(repl, code)
+		global re_m4
+		code = getattr(self.generator, 're_m4', re_m4).sub(repl, code)
 
 		try:
 			d = self.generator.dct

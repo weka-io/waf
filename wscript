@@ -121,7 +121,7 @@ def compute_revision():
 
 	def visit(arg, dirname, names):
 		for pos, name in enumerate(names):
-			if name[0] == '.' or name in ['_build_', 'build']:
+			if name[0] == '.' or name in ('_build_', 'build'):
 				del names[pos]
 			elif name.endswith('.py'):
 				arg.append(os.path.join(dirname, name))

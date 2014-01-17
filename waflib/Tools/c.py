@@ -11,6 +11,8 @@ from waflib.Tools.ccroot import link_task, stlink_task
 @TaskGen.extension('.c')
 def c_hook(self, node):
 	"Bind the c file extension to the creation of a :py:class:`waflib.Tools.c.c` instance"
+	if not self.env.CC and self.env.CXX:
+		return self.create_compiled_task('cxx', node)
 	return self.create_compiled_task('c', node)
 
 class c(Task.Task):

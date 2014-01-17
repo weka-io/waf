@@ -66,7 +66,7 @@ class package_cls(Build.InstallContext):
 
 # for variants, add command subclasses "package_release", "package_debug", etc
 def init(ctx):
-	for x in ['release', 'debug']:
+	for x in ('release', 'debug'):
 			class tmp(package_cls):
 				cmd = 'package_' + x
 				variant = x

@@ -150,7 +150,7 @@ class BuildContext(Context.Context):
 		self.task_gen_cache_names = {} # reset the cache, each time
 		self.add_to_group(ret, group=kw.get('group', None))
 		return ret
-	
+
 	def rule(self, *k, **kw):
 		"""
 		Wrapper for creating a task generator using the decorator notation. The following code::
@@ -262,17 +262,13 @@ class BuildContext(Context.Context):
 		# display the time elapsed in the progress bar
 		self.timer = Utils.Timer()
 
-		if self.progress_bar:
-			sys.stderr.write(Logs.colors.cursor_off)
 		try:
 			self.compile()
 		finally:
 			if self.progress_bar == 1:
 				c = len(self.returned_tasks) or 1
-				self.to_log(self.progress_line(c, c, Logs.colors.BLUE, Logs.colors.NORMAL))
-				print('')
-				sys.stdout.flush()
-				sys.stderr.write(Logs.colors.cursor_on)
+				m = self.progress_line(c, c, Logs.colors.BLUE, Logs.colors.NORMAL)
+				Logs.info(m, extra={'stream': sys.stderr, 'c1': Logs.colors.cursor_off, 'c2' : Logs.colors.cursor_on})
 			Logs.info("Waf: Leaving directory `%s'" % self.variant_dir)
 		self.post_build()
 
@@ -504,6 +500,9 @@ class BuildContext(Context.Context):
 		"""
 		Compute the progress bar used by ``waf -p``
 		"""
+		if not sys.stderr.isatty():
+			return ''
+
 		n = len(str(total))
 
 		Utils.rot_idx += 1
@@ -521,7 +520,7 @@ class BuildContext(Context.Context):
 		ratio = ((cols*state)//total) - 1
 
 		bar = ('='*ratio+'>').ljust(cols)
-		msg = Utils.indicator % (left, bar, right)
+		msg = Logs.indicator % (left, bar, right)
 
 		return msg
 
