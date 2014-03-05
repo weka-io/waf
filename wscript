@@ -6,7 +6,7 @@
 to make a custom waf file use the option --tools
 
 To add a tool that does not exist in the folder compat15, pass an absolute path:
-./waf-light --make-waf --tools=compat15,/comp/waf/aba.py --prelude=$'\tfrom waflib.extras import aba\n\taba.foo()'
+./waf-light  --tools=compat15,/comp/waf/aba.py --prelude=$'\tfrom waflib.extras import aba\n\taba.foo()'
 """
 
 
@@ -86,8 +86,10 @@ def check(ctx):
 def options(opt):
 
 	# generate waf
-	opt.add_option('--make-waf', action='store_true', default=False,
+	opt.add_option('--make-waf', action='store_true', default=True,
 		help='creates the waf script', dest='waf')
+
+	opt.add_option('--sign', action='store_true', default=False, help='make a signed file', dest='signed')
 
 	opt.add_option('--zip-type', action='store', default='bz2',
 		help='specify the zip type [Allowed values: %s]' % ' '.join(zip_types), dest='zip')
@@ -348,8 +350,25 @@ def create_waf(*k, **kw):
 		f.write(to_bytes('#==>\n#'))
 		f.write(cnt)
 		f.write(to_bytes('\n#<==\n'))
+
+		if Options.options.signed:
+			f.flush()
+			try:
+				os.remove('waf.asc')
+			except OSError:
+				pass
+			ret = Utils.subprocess.Popen('gpg -bass waf', shell=True).wait()
+			if ret:
+				raise ValueError('Could not sign the waf file!')
+
+			sig = Utils.readf('waf.asc')
+			sig = sig.replace('\r', '').replace('\n', '\\n')
+			f.write('#')
+			f.write(sig)
+			f.write('\n')
 	finally:
 		f.close()
+
 
 	if sys.platform == 'win32' or Options.options.make_batch:
 		f = open('waf.bat', 'w')
