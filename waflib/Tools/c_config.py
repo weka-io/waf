@@ -1116,7 +1116,10 @@ def get_cc_version(conf, cc, gcc=False, icc=False):
 			if isD('__clang__'):
 				conf.env['CC_VERSION'] = (k['__clang_major__'], k['__clang_minor__'], k['__clang_patchlevel__'])
 			else:
-				conf.env['CC_VERSION'] = (k['__GNUC__'], k['__GNUC_MINOR__'], k['__GNUC_PATCHLEVEL__'])
+				try:
+					conf.env['CC_VERSION'] = (k['__GNUC__'], k['__GNUC_MINOR__'], k['__GNUC_PATCHLEVEL__'])
+				except KeyError:
+					conf.env['CC_VERSION'] = (k['__GNUC__'], k['__GNUC_MINOR__'], 0)
 	return k
 
 @conf
