@@ -1,3 +1,13 @@
+NEW IN WAF 1.7.16
+-----------------
+* gcc 2.95 detection #1419
+* boost tool misses libs in Debian multiarch (x86_64) #1404
+* Python 3.4 debug version detection #1405
+* ansiterm fix: use FillConsoleOutputCharacterW instead of FillConsoleOutputCharacterA
+* Always return a value which evaluates to True when check_cfg succeeds.
+* Invalid cast in syms.py #1399
+* 'x use y use AAA' will add the AAA flags to x, but 'x use y uselib AAA' will not
+
 NEW IN WAF 1.7.15
 -----------------
 * Fix for tex.py in python3
