@@ -7,6 +7,7 @@ NEW IN WAF 1.7.16
 * Always return a value which evaluates to True when check_cfg succeeds.
 * Invalid cast in syms.py #1399
 * 'x use y use AAA' will add the AAA flags to x, but 'x use y uselib AAA' will not
+* Fixed bld(features='tex', deps='wscript')
 
 NEW IN WAF 1.7.15
 -----------------

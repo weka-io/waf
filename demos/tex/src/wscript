@@ -18,5 +18,5 @@ def build(bld):
 	# optional parameters
 	obj.outs   = 'ps' # we want a postscript output too - 'ps pdf' works too
 	obj.prompt = 1 # put 0 for the batchmode (conceals the debug output)
-	obj.deps   = 'crossreferencing.ltx' # use this to give dependencies directly
+	obj.deps   = 'wscript crossreferencing.ltx' # use this to give dependencies directly
 

@@ -392,13 +392,9 @@ def apply_tex(self):
 
 		# add the manual dependencies
 		if deps_lst:
-			try:
-				lst = tree.node_deps[task.uid()]
-				for n in deps_lst:
-					if not n in lst:
-						lst.append(n)
-			except KeyError:
-				tree.node_deps[task.uid()] = deps_lst
+			for n in deps_lst:
+				if not n in task.dep_nodes:
+					task.dep_nodes.append(n)
 
 		v = dict(os.environ)
 		p = node.parent.abspath() + os.pathsep + self.path.abspath() + os.pathsep + self.path.get_bld().abspath() + os.pathsep + v.get('TEXINPUTS', '') + os.pathsep
