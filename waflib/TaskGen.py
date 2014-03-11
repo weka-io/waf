@@ -667,7 +667,7 @@ class subst_pc(Task.Task):
 			return None
 
 		if getattr(self.generator, 'fun', None):
-			self.generator.fun(self)
+			return self.generator.fun(self)
 
 		code = self.inputs[0].read(encoding=getattr(self.generator, 'encoding', 'ISO8859-1'))
 		if getattr(self.generator, 'subst_fun', None):
