@@ -540,7 +540,7 @@ def find_qt4_binaries(self):
 		self.fatal('this uic compiler is for qt3, add uic for qt4 to your path')
 
 	find_bin(['moc-qt4', 'moc'], 'QT_MOC')
-	find_bin(['rcc'], 'QT_RCC')
+	find_bin(['rcc-qt4', 'rcc'], 'QT_RCC')
 	find_bin(['lrelease-qt4', 'lrelease'], 'QT_LRELEASE')
 	find_bin(['lupdate-qt4', 'lupdate'], 'QT_LUPDATE')
 
