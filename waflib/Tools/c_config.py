@@ -145,7 +145,7 @@ def parse_flags(self, line, uselib_store, env=None, force_static=False):
 		if st == '-I' or st == '/I':
 			if not ot: ot = lst.pop(0)
 			appu('INCLUDES_' + uselib, [ot])
-		elif st == '-include':
+		elif st == '-i':
 			tmp = [x, lst.pop(0)]
 			app('CFLAGS', tmp)
 			app('CXXFLAGS', tmp)
