@@ -63,6 +63,16 @@ BOOST_VERSION_CODE = '''
 int main() { std::cout << BOOST_LIB_VERSION << std::endl; }
 '''
 
+BOOST_ERROR_CODE = '''
+#include <boost/system/error_code.hpp>
+int main() { boost::system::error_code c; }
+'''
+
+BOOST_THREAD_CODE = '''
+#include <boost/thread.hpp>
+int main() { boost::thread t; }
+'''
+
 # toolsets from {boost_dir}/tools/build/v2/tools/common.jam
 PLATFORM = Utils.unversioned_sys_platform()
 detect_intel = lambda env: (PLATFORM == 'win32') and 'iw' or 'il'
@@ -304,23 +314,9 @@ def check_boost(self, *k, **kw):
 
 	def try_link():
 		if 'system' in params['lib']:
-			self.check_cxx(
-			 fragment="\n".join([
-			  '#include <boost/system/error_code.hpp>',
-			  'int main() { boost::system::error_code c; }',
-			 ]),
-			 use=var,
-			 execute=False,
-			)
+			self.check_cxx(fragment=BOOST_ERROR_CODE, use=var, execute=False)
 		if 'thread' in params['lib']:
-			self.check_cxx(
-			 fragment="\n".join([
-			  '#include <boost/thread.hpp>',
-			  'int main() { boost::thread t; }',
-			 ]),
-			 use=var,
-			 execute=False,
-			)
+			self.check_cxx(fragment=BOOST_THREAD_CODE, use=var, execute=False)
 
 	if params.get('linkage_autodetect', False):
 		self.start_msg("Attempting to detect boost linkage flags")
