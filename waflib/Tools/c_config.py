@@ -169,6 +169,8 @@ def parse_flags(self, line, uselib_store, env=None, force_static=False):
 			appu('FRAMEWORK_' + uselib, [lst.pop(0)])
 		elif x.startswith('-F'):
 			appu('FRAMEWORKPATH_' + uselib, [x[2:]])
+		elif x == '-Wl,-rpath':
+			app('LINKFLAGS_'+uselib, [x, lst.pop(0)])
 		elif x.startswith('-Wl'):
 			app('LINKFLAGS_' + uselib, [x])
 		elif x.startswith('-m') or x.startswith('-f') or x.startswith('-dynamic'):
