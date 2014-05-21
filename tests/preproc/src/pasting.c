@@ -6,3 +6,4 @@
 
 #include STRINGIFY(PASTE(PREFIX_VAL, PASTE(a, SUFFIX_VAL)).h)
 
+int main() {return 0;}

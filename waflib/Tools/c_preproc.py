@@ -682,7 +682,8 @@ def extract_include(txt, defs):
 			return '"', toks[0][1]
 	else:
 		if toks[0][1] == '<' and toks[-1][1] == '>':
-			return stringize(toks).lstrip('<').rstrip('>')
+			ret = '<', stringize(toks).lstrip('<').rstrip('>')
+			return ret
 
 	raise PreprocError("could not parse include %s." % txt)
 
