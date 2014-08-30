@@ -68,7 +68,7 @@ class BuildContext(Context.Context):
 
 		self.cache_dir = kw.get('cache_dir', None)
 		if not self.cache_dir:
-			self.cache_dir = self.out_dir + os.sep + CACHE_DIR
+			self.cache_dir = os.path.join(self.out_dir, CACHE_DIR)
 
 		# map names to environments, the '' must be defined
 		self.all_envs = {}

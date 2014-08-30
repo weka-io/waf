@@ -118,7 +118,7 @@ def waf_entry_point(current_directory, version, wafdir):
 		sys.exit(1)
 
 	try:
-		set_main_module(Context.run_dir + os.sep + Context.WSCRIPT_FILE)
+		set_main_module(os.path.join(Context.run_dir, Context.WSCRIPT_FILE))
 	except Errors.WafError as e:
 		Logs.pprint('RED', e.verbose_msg)
 		Logs.error(str(e))
@@ -254,7 +254,7 @@ def distclean_dir(dirname):
 	for (root, dirs, files) in os.walk(dirname):
 		for f in files:
 			if _can_distclean(f):
-				fname = root + os.sep + f
+				fname = os.path.join(root, f)
 				try:
 					os.remove(fname)
 				except OSError:

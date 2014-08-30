@@ -240,11 +240,11 @@ class ConfigurationContext(Context.Context):
 		env['environ'] = dict(self.environ)
 
 		if not self.env.NO_LOCK_IN_RUN:
-			env.store(Context.run_dir + os.sep + Options.lockfile)
+			env.store(os.path.join(Context.run_dir, Options.lockfile))
 		if not self.env.NO_LOCK_IN_TOP:
-			env.store(Context.top_dir + os.sep + Options.lockfile)
+			env.store(os.path.join(Context.top_dir, Options.lockfile))
 		if not self.env.NO_LOCK_IN_OUT:
-			env.store(Context.out_dir + os.sep + Options.lockfile)
+			env.store(os.path.join(Context.out_dir, Options.lockfile))
 
 	def prepare_env(self, env):
 		"""
