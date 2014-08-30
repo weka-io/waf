@@ -80,9 +80,12 @@ def split_path_cygwin(path):
 re_sp = re.compile('[/\\\\]')
 def split_path_win32(path):
 	if path.startswith('\\\\'):
-		ret = re.split(re_sp, path)[2:]
-		ret[0] = '\\' + ret[0]
-		return ret
+		if path.startswith('\\\\?'):
+			path = path[4:]
+		else:
+			ret = re.split(re_sp, path)[2:]
+			ret[0] = '\\\\' + ret[0]
+			return ret
 	return re.split(re_sp, path)
 
 if sys.platform == 'cygwin':
