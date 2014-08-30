@@ -261,7 +261,7 @@ class ocamllex(Task.Task):
 class ocamlyacc(Task.Task):
 	"""parser generator"""
 	color   = 'BLUE'
-	run_str = '${OCAMLYACC} -b ${TGT[0].bld_base(env)} ${SRC}'
+	run_str = '${OCAMLYACC} -b ${TGT[0].bld_base()} ${SRC}'
 	before  = ['ocamlcmi', 'ocaml', 'ocamlcc']
 
 def link_may_start(self):
