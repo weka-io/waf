@@ -128,11 +128,6 @@ def build(bld):
 		shell=True,
 		source='waf.txt asciidoc-dblatex.sty asciidoc-dblatex.xsl', target='waf.pdf', scan=ascii_doc_scan)
 
-	bld(rule='${A2X} -L -a toc --icons-dir=. --icons -D ${gen.path.get_bld().abspath()} \
-                -d article -f pdf --dblatex-opts "-s ${SRC[1].abspath()} -p ${SRC[2].abspath()}" ${SRC[0].bldpath()}',
-		shell=True,
-		source='intro_waf_1.6.txt asciidoc-dblatex.sty asciidoc-dblatex.xsl', target='intro_waf_1.6.pdf', scan=ascii_doc_scan)
-
 	bld(rule='ln -sf single.html index.html', shell=True)
 
 	if bld.options.exe:

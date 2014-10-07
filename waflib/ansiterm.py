@@ -17,12 +17,16 @@ from waflib.Utils import threading
 wlock = threading.Lock()
 
 try:
-	from ctypes import Structure, windll, c_short, c_ushort, c_ulong, c_int, byref, c_char, POINTER, c_long
+	from ctypes import Structure, windll, c_short, c_ushort, c_ulong, c_int, byref, c_wchar, POINTER, c_long
 except ImportError:
 
 	class AnsiTerm(object):
 		def __init__(self, stream):
 			self.stream = stream
+			try:
+				self.errors = self.stream.errors
+			except AttributeError:
+				pass # python 2.5
 			self.encoding = self.stream.encoding
 
 		def write(self, txt):
@@ -71,8 +75,8 @@ else:
 	windll.kernel32.GetConsoleScreenBufferInfo.restype = c_long
 	windll.kernel32.SetConsoleTextAttribute.argtypes = [c_ulong, c_ushort]
 	windll.kernel32.SetConsoleTextAttribute.restype = c_long
-	windll.kernel32.FillConsoleOutputCharacterA.argtypes = [c_ulong, c_char, c_ulong, POINTER(COORD), POINTER(c_ulong)]
-	windll.kernel32.FillConsoleOutputCharacterA.restype = c_long
+	windll.kernel32.FillConsoleOutputCharacterW.argtypes = [c_ulong, c_wchar, c_ulong, POINTER(COORD), POINTER(c_ulong)]
+	windll.kernel32.FillConsoleOutputCharacterW.restype = c_long
 	windll.kernel32.FillConsoleOutputAttribute.argtypes = [c_ulong, c_ushort, c_ulong, POINTER(COORD), POINTER(c_ulong) ]
 	windll.kernel32.FillConsoleOutputAttribute.restype = c_long
 	windll.kernel32.SetConsoleCursorPosition.argtypes = [c_ulong, POINTER(COORD) ]
@@ -82,14 +86,14 @@ else:
 
 	class AnsiTerm(object):
 		"""
-		Wrapper for cmd.exe stdio, to support vt100 escape codes
-
-		Notes:
-		- CR printed when the cursor is at EOL will do nothing,
-		  whereas on UNIX, it will go to the line beginning.
+		emulate a vt100 terminal in cmd.exe
 		"""
 		def __init__(self, s):
 			self.stream = s
+			try:
+				self.errors = s.errors
+			except AttributeError:
+				pass # python2.5
 			self.encoding = s.encoding
 			self.cursor_history = []
 
@@ -126,7 +130,7 @@ else:
 				line_start = sbinfo.CursorPosition
 				line_length = sbinfo.Size.X - sbinfo.CursorPosition.X
 			chars_written = c_ulong()
-			windll.kernel32.FillConsoleOutputCharacterA(self.hconsole, c_char(' '), line_length, line_start, byref(chars_written))
+			windll.kernel32.FillConsoleOutputCharacterW(self.hconsole, c_wchar(' '), line_length, line_start, byref(chars_written))
 			windll.kernel32.FillConsoleOutputAttribute(self.hconsole, sbinfo.Attributes, line_length, line_start, byref(chars_written))
 
 		def clear_screen(self, param):
@@ -143,7 +147,7 @@ else:
 				clear_start = sbinfo.CursorPosition
 				clear_length = ((sbinfo.Size.X - sbinfo.CursorPosition.X) + sbinfo.Size.X * (sbinfo.Size.Y - sbinfo.CursorPosition.Y))
 			chars_written = c_ulong()
-			windll.kernel32.FillConsoleOutputCharacterA(self.hconsole, c_char(' '), clear_length, clear_start, byref(chars_written))
+			windll.kernel32.FillConsoleOutputCharacterW(self.hconsole, c_wchar(' '), clear_length, clear_start, byref(chars_written))
 			windll.kernel32.FillConsoleOutputAttribute(self.hconsole, sbinfo.Attributes, clear_length, clear_start, byref(chars_written))
 
 		def push_cursor(self, param):
@@ -271,7 +275,7 @@ else:
 							if cmd_func:
 								cmd_func(self, param)
 						else:
-							self.stream.write(txt)
+							self.writeconsole(txt)
 				else:
 					# no support for colors in the console, just output the text:
 					# eclipse or msys may be able to interpret the escape sequences
@@ -279,11 +283,33 @@ else:
 			finally:
 				wlock.release()
 
+		def writeconsole(self, txt):
+			chars_written = c_int()
+			writeconsole = windll.kernel32.WriteConsoleA
+			if isinstance(txt, _type):
+				writeconsole = windll.kernel32.WriteConsoleW
+
+			# MSDN says that there is a shared buffer of 64 KB for the console
+			# writes. Attempt to not get ERROR_NOT_ENOUGH_MEMORY, see waf issue #746
+			done = 0
+			todo = len(txt)
+			chunk = 32<<10
+			while todo != 0:
+				doing = min(chunk, todo)
+				buf = txt[done:done+doing]
+				r = writeconsole(self.hconsole, buf, doing, byref(chars_written), None)
+				if r == 0:
+					chunk >>= 1
+					continue
+				done += doing
+				todo -= doing
+
+
 		def fileno(self):
 			return self.stream.fileno()
 
 		def flush(self):
-			return self.stream.flush()
+			pass
 
 		def isatty(self):
 			return self._isatty
@@ -294,7 +320,8 @@ else:
 		sbinfo = CONSOLE_SCREEN_BUFFER_INFO()
 		def get_term_cols():
 			windll.kernel32.GetConsoleScreenBufferInfo(console, byref(sbinfo))
-			return sbinfo.Size.X
+			# TODO Issue 1401
+			return sbinfo.Size.X - 1
 
 # just try and see
 try:

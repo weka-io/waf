@@ -5,6 +5,8 @@ Create a tarball of the build results. The package command aggregates
 the functionality of build, install and dist in a single command.
 
 $ waf configure package
+
+See also playground/distnet/ for a more enterprisey example
 """
 
 APPNAME = 'ex'

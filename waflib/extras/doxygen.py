@@ -76,7 +76,14 @@ class doxygen(Task.Task):
 		if not getattr(self, 'pars', None):
 			txt = self.inputs[0].read()
 			self.pars = parse_doxy(txt)
-			if not self.pars.get('OUTPUT_DIRECTORY'):
+			if self.pars.get('OUTPUT_DIRECTORY'):
+				# Use the path parsed from the Doxyfile as an absolute path
+				output_node = self.inputs[0].parent.get_bld().make_node(self.pars['OUTPUT_DIRECTORY'])
+				output_node.mkdir()
+				self.pars['OUTPUT_DIRECTORY'] = output_node.abspath()
+			else:
+				# If no OUTPUT_PATH was specified in the Doxyfile build path from where the Doxyfile lives
+				self.inputs[0].parent.get_bld().mkdir()
 				self.pars['OUTPUT_DIRECTORY'] = self.inputs[0].parent.get_bld().abspath()
 
 			# Override with any parameters passed to the task generator
@@ -99,10 +106,8 @@ class doxygen(Task.Task):
 
 		if not getattr(self, 'output_dir', None):
 			bld = self.generator.bld
-			# First try to find an absolute path, then find or declare a relative path
+			# Output path is always an absolute path as it was transformed above.
 			self.output_dir = bld.root.find_dir(self.pars['OUTPUT_DIRECTORY'])
-			if not self.output_dir:
-				self.output_dir = bld.path.find_or_declare(self.pars['OUTPUT_DIRECTORY'])
 
 		self.signature()
 		return Task.Task.runnable_status(self)
@@ -126,13 +131,12 @@ class doxygen(Task.Task):
 
 	def run(self):
 		dct = self.pars.copy()
-		dct['INPUT'] = ' '.join(['"%s"' % x.abspath() for x in self.doxy_inputs])
 		code = '\n'.join(['%s = %s' % (x, dct[x]) for x in self.pars])
 		code = code.encode() # for python 3
 		#fmt = DOXY_STR % (self.inputs[0].parent.abspath())
 		cmd = Utils.subst_vars(DOXY_STR, self.env)
 		env = self.env.env or None
-		proc = Utils.subprocess.Popen(cmd, shell=True, stdin=Utils.subprocess.PIPE, env=env, cwd=self.generator.bld.path.get_bld().abspath())
+		proc = Utils.subprocess.Popen(cmd, shell=True, stdin=Utils.subprocess.PIPE, env=env, cwd=self.inputs[0].parent.abspath())
 		proc.communicate(code)
 		return proc.returncode
 
@@ -141,6 +145,11 @@ class doxygen(Task.Task):
 		for x in nodes:
 			x.sig = Utils.h_file(x.abspath())
 		self.outputs += nodes
+		if getattr(self.generator, 'install_path', None):
+			if not getattr(self.generator, 'doxy_tar', None):
+				self.generator.bld.install_files(self.generator.install_path,
+					self.outputs,
+					postpone=False)
 		return Task.Task.post_run(self)
 
 class tar(Task.Task):
@@ -163,7 +172,7 @@ class tar(Task.Task):
 		return Task.Task.runnable_status(self)
 
 	def __str__(self):
-		tgt_str = ' '.join([a.nice_path(self.env) for a in self.outputs])
+		tgt_str = ' '.join([a.path_from(a.ctx.launch_node()) for a in self.outputs])
 		return '%s: %s\n' % (self.__class__.__name__, tgt_str)
 
 @feature('doxygen')
@@ -190,6 +199,8 @@ def process_doxy(self):
 			tsk.env['TAROPTS'] = ['czf']
 		else:
 			tsk.env['TAROPTS'] = ['cf']
+		if getattr(self, 'install_path', None):
+			self.bld.install_files(self.install_path, tsk.outputs)
 
 def configure(conf):
 	'''

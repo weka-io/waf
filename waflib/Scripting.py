@@ -45,9 +45,10 @@ def waf_entry_point(current_directory, version, wafdir):
 	no_climb = os.environ.get('NOCLIMB', None)
 	if not no_climb:
 		for k in no_climb_commands:
-			if k in sys.argv:
-				no_climb = True
-				break
+			for y in sys.argv:
+				if y.startswith(k):
+					no_climb = True
+					break
 
 	# try to find a lock file (if the project was configured)
 	# at the same time, store the first wscript file seen
@@ -118,7 +119,7 @@ def waf_entry_point(current_directory, version, wafdir):
 		sys.exit(1)
 
 	try:
-		set_main_module(Context.run_dir + os.sep + Context.WSCRIPT_FILE)
+		set_main_module(os.path.join(Context.run_dir, Context.WSCRIPT_FILE))
 	except Errors.WafError as e:
 		Logs.pprint('RED', e.verbose_msg)
 		Logs.error(str(e))
@@ -187,6 +188,10 @@ def parse_options():
 	"""
 	Context.create_context('options').execute()
 
+	for var in Options.envvars:
+		(name, value) = var.split('=', 1)
+		os.environ[name.strip()] = value
+
 	if not Options.commands:
 		Options.commands = [default_cmd]
 	Options.commands = [x for x in Options.commands if x != 'options'] # issue 1076
@@ -216,7 +221,11 @@ def run_command(cmd_name):
 	ctx.log_timer = Utils.Timer()
 	ctx.options = Options.options # provided for convenience
 	ctx.cmd = cmd_name
-	ctx.execute()
+	try:
+		ctx.execute()
+	finally:
+		# Issue 1374
+		ctx.finalize()
 	return ctx
 
 def run_commands():
@@ -254,7 +263,7 @@ def distclean_dir(dirname):
 	for (root, dirs, files) in os.walk(dirname):
 		for f in files:
 			if _can_distclean(f):
-				fname = root + os.sep + f
+				fname = os.path.join(root, f)
 				try:
 					os.remove(fname)
 				except OSError:
@@ -289,16 +298,17 @@ def distclean(ctx):
 					pass
 				except OSError as e:
 					if e.errno != errno.ENOENT:
-						Logs.warn('project %r cannot be removed' % proj[Context.OUT])
+						Logs.warn('Could not remove %r' % proj['out_dir'])
 			else:
 				distclean_dir(proj['out_dir'])
 
 			for k in (proj['out_dir'], proj['top_dir'], proj['run_dir']):
+				p = os.path.join(k, Options.lockfile)
 				try:
-					os.remove(os.path.join(k, Options.lockfile))
+					os.remove(p)
 				except OSError as e:
 					if e.errno != errno.ENOENT:
-						Logs.warn('file %r cannot be removed' % f)
+						Logs.warn('Could not remove %r' % p)
 
 		# remove local waf cache folders
 		if not Options.commands:
@@ -336,7 +346,7 @@ class Dist(Context.Context):
 		node = self.base_path.make_node(arch_name)
 		try:
 			node.delete()
-		except Exception:
+		except OSError:
 			pass
 
 		files = self.get_files()
@@ -574,6 +584,8 @@ def autoconfigure(execute_method):
 		if do_config:
 			Options.commands.insert(0, self.cmd)
 			Options.commands.insert(0, 'configure')
+			if Configure.autoconfig == 'clobber':
+				Options.options.__dict__ = env.options
 			return
 
 		return execute_method(self)

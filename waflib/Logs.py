@@ -40,7 +40,7 @@ colors_lst = {
 'cursor_off' :'\x1b[?25l',
 }
 
-indicator = '\x1b[K%s%s%s\r'
+indicator = '\r\x1b[K%s%s%s'
 
 def enable_colors(use):
 	if use == 1:
@@ -132,12 +132,18 @@ class log_handler(logging.StreamHandler):
 	def emit(self, record):
 		# default implementation
 		try:
-			record.stream = self.stream = sys.stderr
+			try:
+				self.stream = record.stream
+			except AttributeError:
+				if record.levelno >= logging.WARNING:
+					record.stream = self.stream = sys.stderr
+				else:
+					record.stream = self.stream = sys.stdout
 			self.emit_override(record)
 			self.flush()
 		except (KeyboardInterrupt, SystemExit):
 			raise
-		except:
+		except: # from the python library -_-
 			self.handleError(record)
 
 	def emit_override(self, record, **kw):
@@ -157,7 +163,7 @@ class log_handler(logging.StreamHandler):
 				else:
 					stream.write(fs % msg)
 			except UnicodeError:
-				stream.write(fs % msg.encode("UTF-8"))
+				stream.write((fs % msg).encode("UTF-8"))
 		else:
 			logging.StreamHandler.emit(self, record)
 
@@ -173,7 +179,8 @@ class formatter(logging.Formatter):
 		except Exception:
 			msg = rec.msg
 
-		if rec.stream.isatty():
+		use = colors_lst['USE']
+		if (use == 1 and rec.stream.isatty()) or use == 2:
 
 			c1 = getattr(rec, 'c1', None)
 			if c1 is None:
@@ -185,7 +192,7 @@ class formatter(logging.Formatter):
 				elif rec.levelno >= logging.INFO:
 					c1 = colors.GREEN
 			c2 = getattr(rec, 'c2', colors.NORMAL)
-			msg = '%s%s%s' % (c1, msg, c2) # TODO OMG
+			msg = '%s%s%s' % (c1, msg, c2)
 		else:
 			msg = msg.replace('\r', '\n')
 			msg = re.sub(r'\x1B\[(K|.*?(m|h|l))', '', msg)
@@ -263,7 +270,14 @@ def make_logger(path, name):
 		from waflib import Logs
 		bld.logger = Logs.make_logger('test.log', 'build')
 		bld.check(header_name='sadlib.h', features='cxx cprogram', mandatory=False)
+
+		# have the file closed immediately
+		Logs.free_logger(bld.logger)
+
+		# stop logging
 		bld.logger = None
+
+	The method finalize() of the command will try to free the logger, if any
 
 	:param path: file name to write the log output to
 	:type path: string
@@ -278,7 +292,7 @@ def make_logger(path, name):
 	logger.setLevel(logging.DEBUG)
 	return logger
 
-def make_mem_logger(name, to_log, size=10000):
+def make_mem_logger(name, to_log, size=8192):
 	"""
 	Create a memory logger to avoid writing concurrently to the main logger
 	"""
@@ -292,7 +306,19 @@ def make_mem_logger(name, to_log, size=10000):
 	logger.setLevel(logging.DEBUG)
 	return logger
 
-def pprint(col, str, label='', sep='\n'):
+def free_logger(logger):
+	"""
+	Free the resources held by the loggers created through make_logger or make_mem_logger.
+	This is used for file cleanup and for handler removal (logger objects are re-used).
+	"""
+	try:
+		for x in logger.handlers:
+			x.close()
+			logger.removeHandler(x)
+	except Exception as e:
+		pass
+
+def pprint(col, msg, label='', sep='\n'):
 	"""
 	Print messages in color immediately on stderr::
 
@@ -301,12 +327,12 @@ def pprint(col, str, label='', sep='\n'):
 
 	:param col: color name to use in :py:const:`Logs.colors_lst`
 	:type col: string
-	:param str: message to display
-	:type str: string or a value that can be printed by %s
+	:param msg: message to display
+	:type msg: string or a value that can be printed by %s
 	:param label: a message to add after the colored output
 	:type label: string
 	:param sep: a string to append at the end (line separator)
 	:type sep: string
 	"""
-	info("%s%s%s %s" % (colors(col), str, colors.NORMAL, label), extra={'terminator':sep})
+	info("%s%s%s %s" % (colors(col), msg, colors.NORMAL, label), extra={'terminator':sep})
 

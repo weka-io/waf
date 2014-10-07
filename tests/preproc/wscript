@@ -65,9 +65,9 @@ def build(bld):
 			color = "GREEN"
 		else:
 			color = "RED"
-		pprint(color, "%s" % (ret))
+		pprint(color, "%s" % str(ret))
 
-	test("fun6(math, h)", "math.h")
+	test("fun6(math, h)", ("<", "math.h"))
 
 	def test(x, result):
 		toks = c_preproc.tokenize(x)

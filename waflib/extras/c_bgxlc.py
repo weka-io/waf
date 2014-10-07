@@ -2,13 +2,17 @@
 # encoding: utf-8
 # harald at klimachs.de
 
+"""
+IBM XL Compiler for Blue Gene
+"""
+
 import os
 from waflib.Tools import ccroot,ar
 from waflib.Configure import conf
 
 from waflib.Tools import xlc # method xlc_common_flags
 from waflib.Tools.compiler_c import c_compiler
-c_compiler['linux'].insert(0, 'c_bgxlc')
+c_compiler['linux'].append('c_bgxlc')
 
 @conf
 def find_bgxlc(conf):

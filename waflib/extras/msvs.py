@@ -352,13 +352,13 @@ def rm_blank_lines(txt):
 BOM = '\xef\xbb\xbf'
 try:
 	BOM = bytes(BOM, 'iso8859-1') # python 3
-except:
+except TypeError:
 	pass
 
 def stealth_write(self, data, flags='wb'):
 	try:
 		x = unicode
-	except:
+	except AttributeError:
 		data = data.encode('utf-8') # python 3
 	else:
 		data = data.decode(sys.getfilesystemencoding(), 'replace')
@@ -793,7 +793,7 @@ class msvs_generator(BuildContext):
 		"""
 		try:
 			return self.solution_node
-		except:
+		except AttributeError:
 			pass
 
 		solution_name = getattr(self, 'solution_name', None)
@@ -1004,14 +1004,14 @@ def options(ctx):
 			uns = ctx.root.make_node(uns)
 			try:
 				uns.delete()
-			except:
+			except OSError:
 				pass
 
 			uns = ctx.options.execsolution.replace('.sln', add)
 			uns = ctx.root.make_node(uns)
 			try:
 				uns.write('')
-			except:
+			except (OSError, IOError):
 				pass
 
 		if ctx.options.execsolution:

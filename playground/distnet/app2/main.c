@@ -1,4 +1,4 @@
-#include "all.h"
+#include "head.h"
 
 int main()
 {

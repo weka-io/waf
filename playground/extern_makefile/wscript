@@ -2,6 +2,7 @@
 
 def configure(conf):
 	conf.env.thecmd = 'all'
+	conf.load('gcc')
 
 def build(bld):
 	bld(rule='touch ${TGT}', target='bar.txt')

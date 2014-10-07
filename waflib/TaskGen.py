@@ -246,7 +246,7 @@ class task_gen(object):
 		for k in task_gen.mappings:
 			if name.endswith(k):
 				return task_gen.mappings[k]
-		raise Errors.WafError("File %r has no mapping in %r (did you forget to load a waf tool?)" % (node, task_gen.mappings.keys()))
+		raise Errors.WafError("File %r has no mapping in %r (have you forgotten to load a waf tool?)" % (node, task_gen.mappings.keys()))
 
 	def create_task(self, name, src=None, tgt=None, **kw):
 		"""
@@ -505,7 +505,7 @@ def to_nodes(self, lst, path=None):
 	path = path or self.path
 	find = path.find_resource
 
-	if isinstance(lst, self.path.__class__):
+	if isinstance(lst, Node.Node):
 		lst = [lst]
 
 	# either a list or a string, convert to a list of nodes
@@ -606,9 +606,6 @@ def process_rule(self):
 				x.parent.mkdir() # if a node was given, create the required folders
 				tsk.outputs.append(x)
 		if getattr(self, 'install_path', None):
-			# from waf 1.5
-			# although convenient, it does not 1. allow to name the target file and 2. symlinks
-			# TODO remove in waf 1.7
 			self.bld.install_files(self.install_path, tsk.outputs)
 
 	if getattr(self, 'source', None):
@@ -674,12 +671,12 @@ class subst_pc(Task.Task):
 			return None
 
 		if getattr(self.generator, 'fun', None):
-			self.generator.fun(self)
+			return self.generator.fun(self)
 
 		code = self.inputs[0].read(encoding=getattr(self.generator, 'encoding', 'ISO8859-1'))
 		if getattr(self.generator, 'subst_fun', None):
 			code = self.generator.subst_fun(self, code)
-			if code:
+			if code is not None:
 				self.outputs[0].write(code, encoding=getattr(self.generator, 'encoding', 'ISO8859-1'))
 			return
 

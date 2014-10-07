@@ -128,7 +128,12 @@ def get_msvc_version(conf, compiler, version, target, vcvars):
 	:rtype: tuple of strings
 	"""
 	debug('msvc: get_msvc_version: %r %r %r', compiler, version, target)
-	batfile = conf.bldnode.make_node('waf-print-msvc.bat')
+
+	try:
+		conf.msvc_cnt += 1
+	except AttributeError:
+		conf.msvc_cnt = 1
+	batfile = conf.bldnode.make_node('waf-print-msvc-%d.bat' % conf.msvc_cnt)
 	batfile.write("""@echo off
 set INCLUDE=
 set LIB=
@@ -867,10 +872,8 @@ def apply_flags_msvc(self):
 				pdbnode = self.link_task.outputs[0].change_ext('.pdb')
 				self.link_task.outputs.append(pdbnode)
 
-				try:
-					self.install_task.source.append(pdbnode)
-				except AttributeError:
-					pass
+				if getattr(self, 'install_task', None):
+					self.pdb_install_task = self.bld.install_files(self.install_task.dest, pdbnode, env=self.env)
 
 				break
 

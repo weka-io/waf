@@ -1,12 +1,12 @@
 #! /usr/bin/env python
 # encoding: utf-8
-# Thomas Nagy, 2005-2010
+# Thomas Nagy, 2005-2014
 
 """
 to make a custom waf file use the option --tools
 
 To add a tool that does not exist in the folder compat15, pass an absolute path:
-./waf-light --make-waf --tools=compat15,/comp/waf/aba.py --prelude=$'\tfrom waflib.extras import aba\n\taba.foo()'
+./waf-light  --tools=compat15,/comp/waf/aba.py --prelude=$'\tfrom waflib.extras import aba\n\taba.foo()'
 """
 
 
@@ -86,8 +86,10 @@ def check(ctx):
 def options(opt):
 
 	# generate waf
-	opt.add_option('--make-waf', action='store_true', default=False,
+	opt.add_option('--make-waf', action='store_true', default=True,
 		help='creates the waf script', dest='waf')
+
+	opt.add_option('--sign', action='store_true', default=False, help='make a signed file', dest='signed')
 
 	opt.add_option('--zip-type', action='store', default='bz2',
 		help='specify the zip type [Allowed values: %s]' % ' '.join(zip_types), dest='zip')
@@ -244,7 +246,7 @@ def sfilter(path):
 			f.close()
 
 	if sys.hexversion > 0x030000f0:
-		return (io.BytesIO(cnt.encode('utf-8')), len(cnt), cnt)
+		return (io.BytesIO(cnt.encode('utf-8')), len(cnt.encode('utf-8')), cnt)
 	return (io.BytesIO(cnt), len(cnt), cnt)
 
 def create_waf(*k, **kw):
@@ -358,9 +360,10 @@ def create_waf(*k, **kw):
 		raise
 
 	# The reverse order prevent collisions
+	(cnt, C3) = find_unused(cnt, '\x00')
 	(cnt, C2) = find_unused(cnt, '\r')
 	(cnt, C1) = find_unused(cnt, '\n')
-	ccc = code1.replace("C1='x'", "C1='%s'" % C1).replace("C2='x'", "C2='%s'" % C2)
+	ccc = code1.replace("C1='x'", "C1='%s'" % C1).replace("C2='x'", "C2='%s'" % C2).replace("C3='x'", "C3='%s'" % C3)
 
 	f = open('waf', 'wb')
 	try:
@@ -368,13 +371,30 @@ def create_waf(*k, **kw):
 		f.write(to_bytes('#==>\n#'))
 		f.write(cnt)
 		f.write(to_bytes('\n#<==\n'))
+
+		if Options.options.signed:
+			f.flush()
+			try:
+				os.remove('waf.asc')
+			except OSError:
+				pass
+			ret = Utils.subprocess.Popen('gpg -bass waf', shell=True).wait()
+			if ret:
+				raise ValueError('Could not sign the waf file!')
+
+			sig = Utils.readf('waf.asc')
+			sig = sig.replace('\r', '').replace('\n', '\\n')
+			f.write('#')
+			f.write(sig)
+			f.write('\n')
 	finally:
 		f.close()
+
 
 	if sys.platform == 'win32' or Options.options.make_batch:
 		f = open('waf.bat', 'w')
 		try:
-			f.write('@python -x "%~dp0waf" %* & exit /b\n')
+			f.write('@python -x "%~dp0waf" %*\n@exit /b %ERRORLEVEL%\n')
 		finally:
 			f.close()
 

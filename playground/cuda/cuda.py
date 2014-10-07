@@ -37,7 +37,7 @@ def find_cuda_libs(self):
 	if not self.env.NVCC:
 		self.fatal('check for nvcc first')
 
-	d = self.root.find_node(self.env.NVCC).parent.parent
+	d = self.root.find_node(self.env.NVCC[0]).parent.parent
 
 	node = d.find_node('include')
 	_includes = node and node.abspath() or ''

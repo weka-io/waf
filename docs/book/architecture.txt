@@ -68,7 +68,7 @@ image::classes_build{PIC}["Build classes"{backend@docbook:,width=500:},align="ce
 
 ==== Context commands and recursion
 
-The context commands are designed to be as independent as possible, and may be executed concurrently. The main application is the execution of small builds as part of configuration tests. For example, the method 'waflib.Tools.c_config.run_c_code' creates a private build context internally to perform the tests.
+The context commands are designed to be as independent as possible, and may be executed concurrently. The main application is the execution of small builds as part of configuration tests. For example, the method 'waflib.Configure.run_build' creates a private build context internally to perform the tests.
 Here is an example of a build that creates and executes simple configuration contexts concurrently:
 
 // architecture_link

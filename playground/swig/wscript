@@ -74,7 +74,9 @@ def build(bld):
 		vnum = '1.2.3',
 		use  = 'mylib')
 
-	bld.install_files('${PREFIX}/lib', 'extend/python/test_swig_waf.py')
+        python_site_package = '${PREFIX}/lib/python%s/site-packages' % bld.env.PYTHON_VERSION
+        bld.install_files(python_site_package, 'extend/python/test_swig_waf.py')
+        bld.install_files(python_site_package, 'embed/swigdemo.py')
 
 	bld.add_post_fun(exec_test_python)
 

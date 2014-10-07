@@ -12,15 +12,8 @@ through Python versions 2.3 to 3.X and across different platforms (win32, linux,
 import os, sys, errno, traceback, inspect, re, shutil, datetime, gc
 import subprocess # <- leave this!
 
-try:
-	from collections import deque
-except ImportError:
-	class deque(list):
-		"""A deque for Python 2.3 which does not have one"""
-		def popleft(self):
-			return self.pop(0)
-		def appendleft(self, x):
-			self.insert(0, x)
+from collections import deque, defaultdict
+
 try:
 	import _winreg as winreg
 except ImportError:
@@ -92,23 +85,6 @@ rot_idx = 0
 "Index of the current throbber character (progress bar)"
 
 try:
-	from collections import defaultdict
-except ImportError:
-	class defaultdict(dict):
-		"""
-		defaultdict was introduced in python 2.5, so we leave it for python 2.4 and 2.3
-		"""
-		def __init__(self, default_factory):
-			super(defaultdict, self).__init__()
-			self.default_factory = default_factory
-		def __getitem__(self, key):
-			try:
-				return super(defaultdict, self).__getitem__(key)
-			except KeyError:
-				value = self.default_factory()
-				self[key] = value
-				return value
-try:
 	from collections import OrderedDict as ordered_iter_dict
 except ImportError:
 	class ordered_iter_dict(dict):
@@ -137,7 +113,7 @@ except ImportError:
 		def keys(self):
 			return self.lst
 
-is_win32 = sys.platform in ('win32', 'cli')
+is_win32 = sys.platform in ('win32', 'cli', 'os2')
 
 def readf(fname, m='r', encoding='ISO8859-1'):
 	"""
@@ -167,7 +143,10 @@ def readf(fname, m='r', encoding='ISO8859-1'):
 			txt = f.read()
 		finally:
 			f.close()
-		txt = txt.decode(encoding)
+		if encoding:
+			txt = txt.decode(encoding)
+		else:
+			txt = txt.decode()
 	else:
 		f = open(fname, m)
 		try:
@@ -236,72 +215,76 @@ def h_file(fname):
 		f.close()
 	return m.digest()
 
-if hasattr(os, 'O_NOINHERIT') and sys.hexversion < 0x3040000:
-	def readf_win32(f, m='r', encoding='ISO8859-1'):
-		flags = os.O_NOINHERIT | os.O_RDONLY
-		if 'b' in m:
-			flags |= os.O_BINARY
-		if '+' in m:
-			flags |= os.O_RDWR
-		try:
-			fd = os.open(f, flags)
-		except OSError:
-			raise IOError('Cannot read from %r' % f)
+def readf_win32(f, m='r', encoding='ISO8859-1'):
+	flags = os.O_NOINHERIT | os.O_RDONLY
+	if 'b' in m:
+		flags |= os.O_BINARY
+	if '+' in m:
+		flags |= os.O_RDWR
+	try:
+		fd = os.open(f, flags)
+	except OSError:
+		raise IOError('Cannot read from %r' % f)
 
-		if sys.hexversion > 0x3000000 and not 'b' in m:
-			m += 'b'
-			f = os.fdopen(fd, m)
-			try:
-				txt = f.read()
-			finally:
-				f.close()
-			txt = txt.decode(encoding)
-		else:
-			f = os.fdopen(fd, m)
-			try:
-				txt = f.read()
-			finally:
-				f.close()
-		return txt
-
-	def writef_win32(f, data, m='w', encoding='ISO8859-1'):
-		if sys.hexversion > 0x3000000 and not 'b' in m:
-			data = data.encode(encoding)
-			m += 'b'
-		flags = os.O_CREAT | os.O_TRUNC | os.O_WRONLY | os.O_NOINHERIT
-		if 'b' in m:
-			flags |= os.O_BINARY
-		if '+' in m:
-			flags |= os.O_RDWR
-		try:
-			fd = os.open(f, flags)
-		except OSError:
-			raise IOError('Cannot write to %r' % f)
+	if sys.hexversion > 0x3000000 and not 'b' in m:
+		m += 'b'
 		f = os.fdopen(fd, m)
 		try:
-			f.write(data)
+			txt = f.read()
 		finally:
 			f.close()
-
-	def h_file_win32(fname):
+		if encoding:
+			txt = txt.decode(encoding)
+		else:
+			txt = txt.decode()
+	else:
+		f = os.fdopen(fd, m)
 		try:
-			fd = os.open(fname, os.O_BINARY | os.O_RDONLY | os.O_NOINHERIT)
-		except OSError:
-			raise IOError('Cannot read from %r' % fname)
-		f = os.fdopen(fd, 'rb')
-		m = md5()
-		try:
-			while fname:
-				fname = f.read(200000)
-				m.update(fname)
+			txt = f.read()
 		finally:
 			f.close()
-		return m.digest()
+	return txt
 
+def writef_win32(f, data, m='w', encoding='ISO8859-1'):
+	if sys.hexversion > 0x3000000 and not 'b' in m:
+		data = data.encode(encoding)
+		m += 'b'
+	flags = os.O_CREAT | os.O_TRUNC | os.O_WRONLY | os.O_NOINHERIT
+	if 'b' in m:
+		flags |= os.O_BINARY
+	if '+' in m:
+		flags |= os.O_RDWR
+	try:
+		fd = os.open(f, flags)
+	except OSError:
+		raise IOError('Cannot write to %r' % f)
+	f = os.fdopen(fd, m)
+	try:
+		f.write(data)
+	finally:
+		f.close()
+
+def h_file_win32(fname):
+	try:
+		fd = os.open(fname, os.O_BINARY | os.O_RDONLY | os.O_NOINHERIT)
+	except OSError:
+		raise IOError('Cannot read from %r' % fname)
+	f = os.fdopen(fd, 'rb')
+	m = md5()
+	try:
+		while fname:
+			fname = f.read(200000)
+			m.update(fname)
+	finally:
+		f.close()
+	return m.digest()
+
+# always save these
+readf_unix = readf
+writef_unix = writef
+h_file_unix = h_file
+if hasattr(os, 'O_NOINHERIT') and sys.hexversion < 0x3040000:
 	# replace the default functions
-	readf_old = readf
-	writef_old = writef
-	h_file_old = h_file
 	readf = readf_win32
 	writef = writef_win32
 	h_file = h_file_win32
@@ -326,37 +309,38 @@ Return the hexadecimal representation of a string
 :type s: string
 """
 
+def listdir_win32(s):
+	"""
+	List the contents of a folder in a portable manner.
+	On Win32, return the list of drive letters: ['C:', 'X:', 'Z:']
+
+	:type s: string
+	:param s: a string, which can be empty on Windows
+	"""
+	if not s:
+		try:
+			import ctypes
+		except ImportError:
+			# there is nothing much we can do
+			return [x + ':\\' for x in list('ABCDEFGHIJKLMNOPQRSTUVWXYZ')]
+		else:
+			dlen = 4 # length of "?:\\x00"
+			maxdrives = 26
+			buf = ctypes.create_string_buffer(maxdrives * dlen)
+			ndrives = ctypes.windll.kernel32.GetLogicalDriveStringsA(maxdrives*dlen, ctypes.byref(buf))
+			return [ str(buf.raw[4*i:4*i+2].decode('ascii')) for i in range(int(ndrives/dlen)) ]
+
+	if len(s) == 2 and s[1] == ":":
+		s += os.sep
+
+	if not os.path.isdir(s):
+		e = OSError('%s is not a directory' % s)
+		e.errno = errno.ENOENT
+		raise e
+	return os.listdir(s)
+
 listdir = os.listdir
 if is_win32:
-	def listdir_win32(s):
-		"""
-		List the contents of a folder in a portable manner.
-		On Win32, return the list of drive letters: ['C:', 'X:', 'Z:']
-
-		:type s: string
-		:param s: a string, which can be empty on Windows
-		"""
-		if not s:
-			try:
-				import ctypes
-			except ImportError:
-				# there is nothing much we can do
-				return [x + ':\\' for x in list('ABCDEFGHIJKLMNOPQRSTUVWXYZ')]
-			else:
-				dlen = 4 # length of "?:\\x00"
-				maxdrives = 26
-				buf = ctypes.create_string_buffer(maxdrives * dlen)
-				ndrives = ctypes.windll.kernel32.GetLogicalDriveStringsA(maxdrives*dlen, ctypes.byref(buf))
-				return [ str(buf.raw[4*i:4*i+2].decode('ascii')) for i in range(int(ndrives/dlen)) ]
-
-		if len(s) == 2 and s[1] == ":":
-			s += os.sep
-
-		if not os.path.isdir(s):
-			e = OSError('%s is not a directory' % s)
-			e.errno = errno.ENOENT
-			raise e
-		return os.listdir(s)
 	listdir = listdir_win32
 
 def num2ver(ver):
@@ -407,7 +391,7 @@ def to_list(sth):
 	else:
 		return sth
 
-def split_path(path):
+def split_path_unix(path):
 	return path.split('/')
 
 def split_path_cygwin(path):
@@ -429,6 +413,8 @@ if sys.platform == 'cygwin':
 	split_path = split_path_cygwin
 elif is_win32:
 	split_path = split_path_win32
+else:
+	split_path = split_path_unix
 
 split_path.__doc__ = """
 Split a path by / or \\. This function is not like os.path.split
@@ -452,7 +438,7 @@ def check_dir(path):
 			if not os.path.isdir(path):
 				raise Errors.WafError('Cannot create the folder %r' % path, ex=e)
 
-def check_exe(name):
+def check_exe(name, env=None):
 	"""
 	Ensure that a program exists
 	:type name: string
@@ -468,7 +454,8 @@ def check_exe(name):
 	if fpath and is_exe(name):
 		return os.path.abspath(name)
 	else:
-		for path in os.environ["PATH"].split(os.pathsep):
+		env = env or os.environ
+		for path in env["PATH"].split(os.pathsep):
 			path = path.strip('"')
 			exe_file = os.path.join(path, name)
 			if is_exe(exe_file):
@@ -497,7 +484,8 @@ def quote_define_name(s):
 	:rtype: string
 	:return: Identifier suitable for C defines
 	"""
-	fu = re.compile("[^a-zA-Z0-9]").sub("_", s)
+	fu = re.sub('[^a-zA-Z0-9]', '_', s)
+	fu = re.sub('_+', '_', fu)
 	fu = fu.upper()
 	return fu
 
@@ -605,7 +593,8 @@ def unversioned_sys_platform():
 	# powerpc == darwin for our purposes
 	if s == 'powerpc':
 		return 'darwin'
-	if s == 'win32' or s.endswith('os2') and s != 'sunos2': return s
+	if s == 'win32' or s == 'os2':
+		return s
 	return re.split('\d+$', s)[0]
 
 def nada(*k, **kw):

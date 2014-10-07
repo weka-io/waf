@@ -85,7 +85,7 @@ class run_do_script(run_do_script_base):
 		ret, log_tail  = self.check_erase_log_file()
 		if ret:
 			Logs.error("""Running Stata on %s failed with code %r.\n\nCheck the log file %s, last 10 lines\n\n%s\n\n\n""" % (
-				self.inputs[0].nice_path(), ret, self.env.LOGFILEPATH, log_tail))
+				self.inputs[0].abspath(), ret, self.env.LOGFILEPATH, log_tail))
 		return ret
 
 	def check_erase_log_file(self):
@@ -99,7 +99,6 @@ class run_do_script(run_do_script_base):
 			kwargs = {'file': self.env.LOGFILEPATH, 'mode': 'r', 'encoding': self.env.STATAENCODING}
 		else:
 			kwargs = {'name': self.env.LOGFILEPATH, 'mode': 'r'}
-		
 		with open(**kwargs) as log:
 			log_tail = log.readlines()[-10:]
 			for line in log_tail:
@@ -132,9 +131,9 @@ def apply_run_do_script(tg):
 	for x in tg.to_list(getattr(tg, 'deps', [])):
 		node = tg.path.find_resource(x)
 		if not node:
-			tg.bld.fatal('Could not find dependency %r for running %r' % (x, src_node.nice_path()))
+			tg.bld.fatal('Could not find dependency %r for running %r' % (x, src_node.abspath()))
 		tsk.dep_nodes.append(node)
-	Logs.debug('deps: found dependencies %r for running %r' % (tsk.dep_nodes, src_node.nice_path()))
+	Logs.debug('deps: found dependencies %r for running %r' % (tsk.dep_nodes, src_node.abspath()))
 
 	# Bypass the execution of process_source by setting the source to an empty list
 	tg.source = []

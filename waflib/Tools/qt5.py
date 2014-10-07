@@ -99,7 +99,44 @@ EXT_QT5 = ['.cpp', '.cc', '.cxx', '.C']
 File extensions of C++ files that may require a .moc processing
 """
 
-QT5_LIBS = "Qt5Core Qt5Gui Qt5Widgets Qt5UiTools Qt5Network Qt5OpenGL Qt5Sql Qt5Svg Qt5Test Qt5Xml Qt5XmlPatterns Qt5WebKit Qt5Help Qt5Script Qt5Declarative Qt5Designer"
+QT5_LIBS = '''
+qtmain
+Qt5Bluetooth
+Qt5CLucene
+Qt5Concurrent
+Qt5Core
+Qt5DBus
+Qt5Declarative
+Qt5DesignerComponents
+Qt5Designer
+Qt5Gui
+Qt5Help
+Qt5MultimediaQuick_p
+Qt5Multimedia
+Qt5MultimediaWidgets
+Qt5Network
+Qt5Nfc
+Qt5OpenGL
+Qt5Positioning
+Qt5PrintSupport
+Qt5Qml
+Qt5QuickParticles
+Qt5Quick
+Qt5QuickTest
+Qt5Script
+Qt5ScriptTools
+Qt5Sensors
+Qt5SerialPort
+Qt5Sql
+Qt5Svg
+Qt5Test
+Qt5WebKit
+Qt5WebKitWidgets
+Qt5Widgets
+Qt5WinExtras
+Qt5X11Extras
+Qt5XmlPatterns
+Qt5Xml'''
 
 class qxx(Task.classes['cxx']):
 	"""

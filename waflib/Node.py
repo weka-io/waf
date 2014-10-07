@@ -80,9 +80,12 @@ def split_path_cygwin(path):
 re_sp = re.compile('[/\\\\]')
 def split_path_win32(path):
 	if path.startswith('\\\\'):
-		ret = re.split(re_sp, path)[2:]
-		ret[0] = '\\' + ret[0]
-		return ret
+		if path.startswith('\\\\?'):
+			path = path[4:]
+		else:
+			ret = re.split(re_sp, path)[2:]
+			ret[0] = '\\\\' + ret[0]
+			return ret
 	return re.split(re_sp, path)
 
 if sys.platform == 'cygwin':
@@ -99,7 +102,7 @@ class Node(object):
 
 	The Node objects are not thread safe in any way.
 	"""
-
+	dict_class = dict
 	__slots__ = ('name', 'sig', 'children', 'parent', 'cache_abspath', 'cache_isdir', 'cache_sig')
 	def __init__(self, name, parent):
 		self.name = name
@@ -115,7 +118,8 @@ class Node(object):
 		self.name = data[0]
 		self.parent = data[1]
 		if data[2] is not None:
-			self.children = data[2]
+			# Issue 1480
+			self.children = self.dict_class(data[2])
 		if data[3] is not None:
 			self.sig = data[3]
 
@@ -183,15 +187,18 @@ class Node(object):
 		os.chmod(self.abspath(), val)
 
 	def delete(self):
-		"""Delete the file/folders, and remove this node from the tree. It becomes invalid after that"""
+		"""Delete the file/folder, and remove this node from the tree. Do not use this object after calling this method."""
 		try:
-			if hasattr(self, 'children'):
-				shutil.rmtree(self.abspath())
-			else:
-				os.remove(self.abspath())
-		except OSError:
-			pass
-		self.evict()
+			try:
+				if hasattr(self, 'children'):
+					shutil.rmtree(self.abspath())
+				else:
+					os.remove(self.abspath())
+			except OSError as e:
+				if os.path.exists(self.abspath()):
+					raise e
+		finally:
+			self.evict()
 
 	def evict(self):
 		"""Internal - called when a node is removed"""
@@ -242,7 +249,7 @@ class Node(object):
 			try:
 				self.children
 			except AttributeError:
-				self.children = {}
+				self.children = self.dict_class()
 
 		self.cache_isdir = True
 
@@ -266,7 +273,7 @@ class Node(object):
 			try:
 				ch = cur.children
 			except AttributeError:
-				cur.children = {}
+				cur.children = self.dict_class()
 			else:
 				try:
 					cur = cur.children[x]
@@ -320,7 +327,7 @@ class Node(object):
 					cur = cur.children[x]
 					continue
 			else:
-				cur.children = {}
+				cur.children = self.dict_class()
 			cur = self.__class__(x, cur)
 		return cur
 
@@ -458,7 +465,7 @@ class Node(object):
 		try:
 			lst = set(self.children.keys())
 		except AttributeError:
-			self.children = {}
+			self.children = self.dict_class()
 		else:
 			if remove:
 				for x in lst - set(dircont):
@@ -749,13 +756,6 @@ class Node(object):
 			name = name[:- len(ext_in)] + ext
 
 		return self.parent.find_or_declare([name])
-
-	def nice_path(self, env=None):
-		"""
-		Return the path seen from the launch directory.
-		Can be used for opening files easily (copy-paste in the console).
-		"""
-		return self.path_from(self.ctx.launch_node())
 
 	def bldpath(self):
 		"Path seen from the build directory default/src/foo.cpp"

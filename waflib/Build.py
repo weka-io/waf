@@ -9,7 +9,7 @@ The inheritance tree is the following:
 
 """
 
-import os, sys, errno, re, shutil
+import os, sys, errno, re, shutil, stat
 try:
 	import cPickle
 except ImportError:
@@ -68,7 +68,7 @@ class BuildContext(Context.Context):
 
 		self.cache_dir = kw.get('cache_dir', None)
 		if not self.cache_dir:
-			self.cache_dir = self.out_dir + os.sep + CACHE_DIR
+			self.cache_dir = os.path.join(self.out_dir, CACHE_DIR)
 
 		# map names to environments, the '' must be defined
 		self.all_envs = {}
@@ -265,7 +265,7 @@ class BuildContext(Context.Context):
 		try:
 			self.compile()
 		finally:
-			if self.progress_bar == 1:
+			if self.progress_bar == 1 and sys.stderr.isatty():
 				c = len(self.returned_tasks) or 1
 				m = self.progress_line(c, c, Logs.colors.BLUE, Logs.colors.NORMAL)
 				Logs.info(m, extra={'stream': sys.stderr, 'c1': Logs.colors.cursor_off, 'c2' : Logs.colors.cursor_on})
@@ -658,6 +658,7 @@ class BuildContext(Context.Context):
 			for i in range(len(self.groups)):
 				if id(g) == id(self.groups[i]):
 					self.current_group = i
+					break
 		else:
 			self.current_group = idx
 
@@ -877,14 +878,14 @@ class inst(Task.Task):
 				destfile = os.path.join(destpath, y.path_from(self.path))
 			else:
 				destfile = os.path.join(destpath, y.name)
-			self.generator.bld.do_install(y.abspath(), destfile, self.chmod)
+			self.generator.bld.do_install(y.abspath(), destfile, chmod=self.chmod, tsk=self)
 
 	def exec_install_as(self):
 		"""
 		Predefined method for installing one file with a given name
 		"""
 		destfile = self.get_install_path()
-		self.generator.bld.do_install(self.inputs[0].abspath(), destfile, self.chmod)
+		self.generator.bld.do_install(self.inputs[0].abspath(), destfile, chmod=self.chmod, tsk=self)
 
 	def exec_symlink_as(self):
 		"""
@@ -894,7 +895,7 @@ class inst(Task.Task):
 		src = self.link
 		if self.relative_trick:
 			src = os.path.relpath(src, os.path.dirname(destfile))
-		self.generator.bld.do_link(src, destfile)
+		self.generator.bld.do_link(src, destfile, tsk=self)
 
 class InstallContext(BuildContext):
 	'''installs the targets on the system'''
@@ -907,7 +908,15 @@ class InstallContext(BuildContext):
 		self.uninstall = []
 		self.is_install = INSTALL
 
-	def do_install(self, src, tgt, chmod=Utils.O644):
+	def copy_fun(self, src, tgt, **kw):
+		# override this if you want to strip executables
+		# kw['tsk'].source is the task that created the files in the build
+		if Utils.is_win32 and len(tgt) > 259 and not tgt.startswith('\\\\?\\'):
+			tgt = '\\\\?\\' + tgt
+		shutil.copy2(src, tgt)
+		os.chmod(tgt, kw.get('chmod', Utils.O644))
+
+	def do_install(self, src, tgt, **kw):
 		"""
 		Copy a file from src to tgt with given file permissions. The actual copy is not performed
 		if the source and target file have the same size and the same timestamps. When the copy occurs,
@@ -945,6 +954,13 @@ class InstallContext(BuildContext):
 		if not self.progress_bar:
 			Logs.info('+ install %s (from %s)' % (tgt, srclbl))
 
+		# Give best attempt at making destination overwritable,
+		# like the 'install' utility used by 'make install' does.
+		try:
+			os.chmod(tgt, Utils.O644 | stat.S_IMODE(os.stat(tgt).st_mode))
+		except (OSError, IOError):
+			pass
+
 		# following is for shared libs and stale inodes (-_-)
 		try:
 			os.remove(tgt)
@@ -952,8 +968,7 @@ class InstallContext(BuildContext):
 			pass
 
 		try:
-			shutil.copy2(src, tgt)
-			os.chmod(tgt, chmod)
+			self.copy_fun(src, tgt, **kw)
 		except IOError:
 			try:
 				os.stat(src)
@@ -961,7 +976,7 @@ class InstallContext(BuildContext):
 				Logs.error('File %r does not exist' % src)
 			raise Errors.WafError('Could not install the file %r' % tgt)
 
-	def do_link(self, src, tgt):
+	def do_link(self, src, tgt, **kw):
 		"""
 		Create a symlink from tgt to src.
 
@@ -1004,7 +1019,7 @@ class InstallContext(BuildContext):
 				raise self.WafError('cannot post the task %r' % tsk)
 			tsk.run()
 
-	def install_files(self, dest, files, env=None, chmod=Utils.O644, relative_trick=False, cwd=None, add=True, postpone=True):
+	def install_files(self, dest, files, env=None, chmod=Utils.O644, relative_trick=False, cwd=None, add=True, postpone=True, task=None):
 		"""
 		Create a task to install files on the system::
 
@@ -1030,6 +1045,7 @@ class InstallContext(BuildContext):
 		tsk.bld = self
 		tsk.path = cwd or self.path
 		tsk.chmod = chmod
+		tsk.task = task
 		if isinstance(files, waflib.Node.Node):
 			tsk.source =  [files]
 		else:
@@ -1041,7 +1057,7 @@ class InstallContext(BuildContext):
 		self.run_task_now(tsk, postpone)
 		return tsk
 
-	def install_as(self, dest, srcfile, env=None, chmod=Utils.O644, cwd=None, add=True, postpone=True):
+	def install_as(self, dest, srcfile, env=None, chmod=Utils.O644, cwd=None, add=True, postpone=True, task=None):
 		"""
 		Create a task to install a file on the system with a different name::
 
@@ -1066,13 +1082,14 @@ class InstallContext(BuildContext):
 		tsk.path = cwd or self.path
 		tsk.chmod = chmod
 		tsk.source = [srcfile]
+		tsk.task = task
 		tsk.dest = dest
 		tsk.exec_task = tsk.exec_install_as
 		if add: self.add_to_group(tsk)
 		self.run_task_now(tsk, postpone)
 		return tsk
 
-	def symlink_as(self, dest, src, env=None, cwd=None, add=True, postpone=True, relative_trick=False):
+	def symlink_as(self, dest, src, env=None, cwd=None, add=True, postpone=True, relative_trick=False, task=None):
 		"""
 		Create a task to install a symlink::
 
@@ -1102,6 +1119,7 @@ class InstallContext(BuildContext):
 		tsk.dest = dest
 		tsk.path = cwd or self.path
 		tsk.source = []
+		tsk.task = task
 		tsk.link = src
 		tsk.relative_trick = relative_trick
 		tsk.exec_task = tsk.exec_symlink_as
@@ -1125,7 +1143,7 @@ class UninstallContext(InstallContext):
 			except OSError:
 				break
 
-	def do_install(self, src, tgt, chmod=Utils.O644):
+	def do_install(self, src, tgt, **kw):
 		"""See :py:meth:`waflib.Build.InstallContext.do_install`"""
 		if not self.progress_bar:
 			Logs.info('- remove %s' % tgt)
@@ -1143,7 +1161,7 @@ class UninstallContext(InstallContext):
 
 		self.rm_empty_dirs(tgt)
 
-	def do_link(self, src, tgt):
+	def do_link(self, src, tgt, **kw):
 		"""See :py:meth:`waflib.Build.InstallContext.do_link`"""
 		try:
 			if not self.progress_bar:

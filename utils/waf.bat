@@ -88,13 +88,9 @@ set PYTHON=python
 goto running
 )
 
-set PYTHON_INCLUDE=%PYTHON_DIR%include
-set PYTHON_LIB=%PYTHON_DIR%libs\python27.lib
-set PATH=%PYTHON_DIR%;%PYTHON_DIR%Scripts;%PYTHON_DIR%Tools\Scripts;%PATH%
-
 :running
 
 @echo Using %PYTHON%
 
-"%PYTHON%" -x "%~dp0waf" %*  & Endlocal & exit /b
+"%PYTHON%" -x "%~dp0waf" %*  & Endlocal & exit /b %ERRORLEVEL%
 

@@ -493,10 +493,6 @@ Configuration methods
 
 * ret_msg_
 
-.. _run_c_code: tools/c_config.html#waflib.Tools.c_config.run_c_code
-
-* run_c_code_
-
 .. _scc_common_flags: tools/suncc.html#waflib.Tools.suncc.scc_common_flags
 
 * scc_common_flags_

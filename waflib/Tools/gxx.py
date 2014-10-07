@@ -8,6 +8,8 @@
 g++/llvm detection.
 """
 
+import os, sys
+from waflib import Configure, Options, Utils
 from waflib.Tools import ccroot, ar
 from waflib.Configure import conf
 
@@ -19,7 +21,6 @@ def find_gxx(conf):
 	cxx = conf.find_program(['g++', 'c++'], var='CXX')
 	conf.get_cc_version(cxx, gcc=True)
 	conf.env.CXX_NAME = 'gcc'
-	conf.env.CXX      = cxx
 
 @conf
 def gxx_common_flags(conf):
