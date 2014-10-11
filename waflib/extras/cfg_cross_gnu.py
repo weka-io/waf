@@ -131,9 +131,8 @@ def xcheck_host(conf):
 	conf.xcheck_host_envar('LINKFLAGS', 'LDFLAGS')
 	conf.xcheck_host_envar('LIB')
 	conf.xcheck_host_envar('PKG_CONFIG_PATH')
-	# TODO find a better solution than this ugliness
 	if conf.env.PKG_CONFIG_PATH:
-		conf.find_program('pkg-config', var='PKGCONFIG')
-		conf.env.PKGCONFIG = [
-		 'env', 'PKG_CONFIG_PATH=%s' % (conf.env.PKG_CONFIG_PATH[0])
-		] + conf.env.PKGCONFIG
+		if not conf.env.env:
+			conf.env.env = dict(os.environ)
+		conf.env.env['PKG_CONFIG_PATH'] = conf.env.PKG_CONFIG_PATH[0]
+
