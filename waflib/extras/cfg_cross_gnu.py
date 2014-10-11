@@ -39,11 +39,6 @@ Usage:
 import os
 from waflib import Utils, Configure
 
-try:
-	from shlex import quote
-except ImportError:
-	from pipes import quote
-
 @Configure.conf
 def xcheck_prog(conf, var, tool, cross=False):
 	value = os.environ.get(var, '')
@@ -57,8 +52,7 @@ def xcheck_prog(conf, var, tool, cross=False):
 		pretty = 'cross-compilation %s' % var
 	else:
 		pretty = var
-	conf.msg('Will use %s' % pretty,
-	 " ".join(quote(x) for x in value))
+	conf.msg('Will use %s' % pretty, Utils.list2cmdline(value))
 
 @Configure.conf
 def xcheck_envar(conf, name, wafname=None, cross=False):
@@ -74,8 +68,7 @@ def xcheck_envar(conf, name, wafname=None, cross=False):
 		pretty = 'cross-compilation %s' % wafname
 	else:
 		pretty = wafname
-	conf.msg('Will use %s' % pretty,
-	 " ".join(quote(x) for x in value))
+	conf.msg('Will use %s' % pretty, Utils.list2cmdline(value))
 
 @Configure.conf
 def xcheck_host_prog(conf, name, tool, wafname=None):
@@ -117,8 +110,7 @@ def xcheck_host_envar(conf, name, wafname=None):
 	if specific:
 		value = Utils.to_list(specific)
 		conf.env[wafname] += value
-		conf.msg('Will use cross-compilation %s' % name,
-		 " ".join(quote(x) for x in value))
+		conf.msg('Will use cross-compilation %s' % name, Utils.list2cmdline(value))
 		return
 
 	conf.xcheck_envar('HOST_%s' % name, wafname, cross=True)
