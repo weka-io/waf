@@ -802,6 +802,17 @@ class BuildContext(Context.Context):
 		while 1:
 			yield []
 
+	def exec_command(self, cmd, **kw):
+		"""
+		Execute a command and return the exit status.
+		Like Context.exec_command() but the environment variables are taken
+		from self.env.env if it doesn't evaluate to False
+		"""
+		if self.env.env:
+			kw.setdefault('env', self.env.env)
+
+		return super(BuildContext, self).exec_command(cmd, **kw)
+
 class inst(Task.Task):
 	"""
 	Special task used for installing files and symlinks, it behaves both like a task

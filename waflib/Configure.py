@@ -317,6 +317,29 @@ class ConfigurationContext(Context.Context):
 		"""
 		pass
 
+
+	def cmd_and_log(self, cmd, **kw):
+		"""
+		Execute a command and return stdout if the execution is successful.
+		Like Context.cmd_and_log() but the environment variables are taken
+		from self.env.env if it doesn't evaluate to False
+		"""
+		if self.env.env:
+			kw.setdefault('env', self.env.env)
+
+		return super(ConfigurationContext, self).cmd_and_log(cmd, **kw)
+
+	def exec_command(self, cmd, **kw):
+		"""
+		Execute a command and return the exit status.
+		Like Context.exec_command() but the environment variables are taken
+		from self.env.env if it doesn't evaluate to False
+		"""
+		if self.env.env:
+			kw.setdefault('env', self.env.env)
+
+		return super(ConfigurationContext, self).exec_command(cmd, **kw)
+
 def conf(f):
 	"""
 	Decorator: attach new configuration functions to :py:class:`waflib.Build.BuildContext` and
